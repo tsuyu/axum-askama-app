@@ -52,7 +52,11 @@ async fn main() {
     let app = app(app_state, session_layer);
 
     // Run it
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3001));
+    let port: u16 = std::env::var("PORT")
+        .ok()
+        .and_then(|val| val.parse().ok())
+        .unwrap_or(3001);
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
     println!("Listening on http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
