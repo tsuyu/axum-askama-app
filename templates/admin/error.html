@@ -1,0 +1,30 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Error {{ error_code }}{% endblock %}
+
+{% block admin_nav %}
+{% if let Some(username) = current_admin %}
+<span class="me-3"><strong>{{ username }}</strong></span>
+<a href="/admin/logout" class="btn btn-sm btn-outline-light">Logout</a>
+{% else %}
+<a href="/admin/login" class="btn btn-sm btn-outline-light">Login</a>
+{% endif %}
+{% endblock %}
+
+{% block admin_links %}
+{% if let Some(_) = current_admin %}
+<li class="nav-item">
+    <a class="nav-link" href="/admin/users">Users</a>
+</li>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper animate-slide-up">
+    <div class="text-center py-5">
+        <h1 class="display-4">{{ error_code }}</h1>
+        <p class="lead">{{ error_message }}</p>
+        <a href="/admin/users" class="btn btn-gradient">Back to Admin</a>
+    </div>
+</div>
+{% endblock %}

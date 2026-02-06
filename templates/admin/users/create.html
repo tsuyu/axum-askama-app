@@ -1,0 +1,98 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Admin Create User{% endblock %}
+
+{% block admin_nav %}
+{% if let Some(username) = current_admin %}
+<span class="me-3"><strong>{{ username }}</strong></span>
+<a href="/admin/logout" class="btn btn-sm btn-outline-light">Logout</a>
+{% else %}
+<a href="/admin/login" class="btn btn-sm btn-outline-light">Login</a>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/admin-user-form.js"></script>
+{% endblock %}
+
+{% block admin_links %}
+{% if let Some(_) = current_admin %}
+<li class="nav-item">
+    <a class="nav-link" href="/admin/users">Users</a>
+</li>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="content-wrapper animate-slide-up mt-5">
+                <h1 class="text-center mb-4">Create User</h1>
+
+                {% if let Some(error_msg) = error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error_msg }}
+                </div>
+                {% endif %}
+
+                {% if let Some(success_msg) = success %}
+                <div class="alert alert-success" role="alert">
+                    {{ success_msg }}
+                </div>
+                {% endif %}
+
+                <form method="post" action="/admin/users">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <div class="mb-3">
+                        <label for="address" class="form-label">Address</label>
+                        <input type="text" class="form-control" id="address" name="address" value="{% if let Some(a) = address %}{{ a }}{% endif %}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="country_id" class="form-label">Country</label>
+                        <select class="form-select" id="country_id" name="country_id" required>
+                            <option value="">Select country</option>
+                            {% for c in countries %}
+                            <option value="{{ c.id }}"{% if selected_country_id == c.id %} selected{% endif %}>{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="state_id" class="form-label">State</label>
+                        <select class="form-select" id="state_id" name="state_id" required data-selected="{% if selected_state_id > 0 %}{{ selected_state_id }}{% endif %}">
+                            <option value="">Select state</option>
+                            {% for s in states %}
+                            <option value="{{ s.id }}"{% if selected_state_id == s.id %} selected{% endif %}>{{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" value="{% if let Some(u) = username %}{{ u }}{% endif %}" required autofocus>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{% if let Some(e) = email %}{{ e }}{% endif %}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-gradient btn-lg">Create User</button>
+                    </div>
+                </form>
+
+                <div class="text-center mt-4">
+                    <a href="/admin/users" class="text-decoration-none fw-bold">Back to Users</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

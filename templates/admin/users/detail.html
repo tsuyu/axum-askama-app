@@ -1,0 +1,47 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Admin User Detail{% endblock %}
+
+{% block admin_nav %}
+{% if let Some(username) = current_admin %}
+<span class="me-3"><strong>{{ username }}</strong></span>
+<a href="/admin/logout" class="btn btn-sm btn-outline-light">Logout</a>
+{% else %}
+<a href="/admin/login" class="btn btn-sm btn-outline-light">Login</a>
+{% endif %}
+{% endblock %}
+
+{% block admin_links %}
+{% if let Some(_) = current_admin %}
+<li class="nav-item">
+    <a class="nav-link" href="/admin/users">Users</a>
+</li>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="profile">
+    <h1>{{ user.name }}</h1>
+    <div class="profile-info">
+        <p><strong>ID:</strong> {{ user.id }}</p>
+        <p><strong>Email:</strong> {{ user.email }}</p>
+        {% if let Some(addr) = user.address %}
+        <p><strong>Address:</strong> {{ addr }}</p>
+        {% endif %}
+        {% if let Some(country) = user.country %}
+        <p><strong>Country:</strong> {{ country }}</p>
+        {% endif %}
+        {% if let Some(state) = user.state %}
+        <p><strong>State:</strong> {{ state }}</p>
+        {% endif %}
+    </div>
+    <div class="d-flex gap-2 mb-3">
+        <a href="/admin/users/{{ user.id }}/edit" class="btn btn-gradient btn-sm">Edit</a>
+        <form method="post" action="/admin/users/{{ user.id }}/delete" onsubmit="return confirm('Delete this user?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm">Delete</button>
+        </form>
+    </div>
+    <a href="/admin/users">← Back to Users</a>
+</div>
+{% endblock %}
