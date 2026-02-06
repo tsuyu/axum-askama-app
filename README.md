@@ -7,7 +7,8 @@ A modern web application built with Axum, Askama templates, and MySQL authentica
 - ✨ Modern, responsive UI with gradient design
 - 🔐 Secure authentication with bcrypt password hashing
 - 🗄️ MySQL database integration
-- 📝 Session-based user management
+- 🧠 Redis-backed sessions via `tower-sessions`
+- ⚡ Redis query cache (Laravel-style cache pattern)
 - 🎨 Beautiful login and registration pages
 - 🚀 Fast and efficient with Rust/Axum
 
@@ -15,6 +16,7 @@ A modern web application built with Axum, Askama templates, and MySQL authentica
 
 - Rust (latest stable version)
 - MySQL server (5.7+ or 8.0+)
+- Redis server
 - Cargo
 
 ## Setup Instructions
@@ -58,7 +60,24 @@ Run the schema file to create the users table:
 mysql -u root -p axum_app < schema.sql
 ```
 
-### 4. Configure Environment Variables
+### 4. Install Redis
+
+Make sure Redis is installed and running on your system.
+
+**Ubuntu/Debian:**
+```bash
+sudo apt update
+sudo apt install redis-server
+sudo systemctl start redis-server
+```
+
+**macOS:**
+```bash
+brew install redis
+brew services start redis
+```
+
+### 5. Configure Environment Variables
 
 Copy the example environment file and update with your MySQL credentials:
 
@@ -66,25 +85,27 @@ Copy the example environment file and update with your MySQL credentials:
 cp .env.example .env
 ```
 
-Edit `.env` and update the `DATABASE_URL` with your MySQL credentials:
+Edit `.env` and update the `DATABASE_URL` with your MySQL credentials, and set `REDIS_URL`:
 
 ```env
 DATABASE_URL=mysql://your_username:your_password@localhost:3306/axum_app
+REDIS_URL=redis://127.0.0.1:6379
 ```
 
 **Note:** If you're using MySQL root user without a password:
 ```env
 DATABASE_URL=mysql://root:@localhost:3306/axum_app
+REDIS_URL=redis://127.0.0.1:6379
 ```
 
-### 5. Build and Run
+### 6. Build and Run
 
 ```bash
 cargo build
 cargo run
 ```
 
-The application will be available at: **http://127.0.0.1:3000**
+The application will be available at: **http://127.0.0.1:3001**
 
 ## Usage
 
@@ -116,31 +137,34 @@ Click the "Logout" link in the navigation bar.
 ```
 axum-askama-app/
 ├── src/
-│   ├── main.rs          # Application entry point
-│   ├── handlers.rs      # Route handlers
-│   ├── templates.rs     # Template definitions
-│   ├── db.rs           # Database operations
-│   └── auth.rs         # Authentication logic
-├── templates/
-│   ├── base.html       # Base template
-│   ├── index.html      # Home page
-│   ├── login.html      # Login page
-│   ├── register.html   # Registration page
-│   └── users/
-│       ├── list.html   # Users list
-│       └── detail.html # User detail
-├── schema.sql          # Database schema
-├── .env               # Environment variables
-└── Cargo.toml         # Dependencies
+│   ├── main.rs                 # Application entry point
+│   ├── state.rs                # Shared app state (DB + Redis)
+│   ├── controllers/            # Request handlers
+│   │   ├── auth_controller.rs  # Session auth helpers
+│   │   └── page_controller.rs  # Page + form handlers
+│   ├── models/                 # Data access layer
+│   │   └── db.rs               # Database operations
+│   ├── routes/                 # Route wiring
+│   │   ├── admin.rs
+│   │   ├── public.rs
+│   │   └── mod.rs
+│   └── views/                  # Askama templates
+│       ├── templates.rs
+│       └── mod.rs
+├── templates/                  # HTML templates
+├── static/                     # Static assets
+├── schema.sql                  # Database schema
+├── .env                        # Environment variables
+└── Cargo.toml                  # Dependencies
 
 ```
 
 ## Security Features
 
 - **Password Hashing:** Uses bcrypt with default cost factor
-- **Session Management:** Secure session storage in MySQL
+- **Session Management:** Redis-backed sessions with `tower-sessions`
 - **SQL Injection Protection:** Uses parameterized queries via sqlx
-- **CSRF Protection:** Consider adding for production use
+- **CSRF Protection:** CSRF token stored in session and validated on forms
 
 ## Troubleshooting
 
@@ -153,10 +177,16 @@ If you see "Access denied for user 'root'@'localhost'":
 
 ### Port Already in Use
 
-If port 3000 is already in use, modify the port in `src/main.rs`:
+If port 3001 is already in use, modify the port in `src/main.rs`:
 ```rust
-let addr = SocketAddr::from(([127, 0, 0, 1], 3001)); // Change to 3001
+let addr = SocketAddr::from(([127, 0, 0, 1], 3002)); // Change to 3002
 ```
+
+### Redis Connection Error
+
+If you see Redis connection errors:
+- Ensure Redis is running: `sudo systemctl status redis-server`
+- Verify `REDIS_URL` in `.env` (e.g. `redis://127.0.0.1:6379`)
 
 ## Development
 
