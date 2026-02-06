@@ -147,6 +147,62 @@ pub struct StateOption {
     pub name: String,
 }
 
+#[derive(Debug, Serialize, Clone)]
+pub struct AdminStateRow {
+    pub id: i32,
+    pub country_id: i32,
+    pub country_name: String,
+    pub name: String,
+}
+
+#[derive(Template)]
+#[template(path = "admin/geo/countries_list.html")]
+pub struct AdminCountriesListTemplate {
+    pub page_title: String,
+    pub current_admin: Option<String>,
+    pub csrf_token: String,
+    pub countries: Vec<CountryOption>,
+}
+
+#[derive(Template)]
+#[template(path = "admin/geo/country_form.html")]
+pub struct AdminCountryFormTemplate {
+    pub form_title: String,
+    pub form_action: String,
+    pub submit_label: String,
+    pub country_id: Option<i32>,
+    pub name: Option<String>,
+    pub error: Option<String>,
+    pub success: Option<String>,
+    pub current_admin: Option<String>,
+    pub csrf_token: String,
+}
+
+#[derive(Template)]
+#[template(path = "admin/geo/states_list.html")]
+pub struct AdminStatesListTemplate {
+    pub page_title: String,
+    pub current_admin: Option<String>,
+    pub csrf_token: String,
+    pub states: Vec<AdminStateRow>,
+}
+
+#[derive(Template)]
+#[template(path = "admin/geo/state_form.html")]
+pub struct AdminStateFormTemplate {
+    pub form_title: String,
+    pub form_action: String,
+    pub submit_label: String,
+    pub state_id: Option<i32>,
+    pub name: Option<String>,
+    pub countries: Vec<CountryOption>,
+    pub selected_country_id: i32,
+    pub error: Option<String>,
+    pub success: Option<String>,
+    pub current_admin: Option<String>,
+    pub csrf_token: String,
+}
+
 // Create user page template
 #[derive(Template)]
 #[template(path = "users/create.html")]

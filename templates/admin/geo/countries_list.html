@@ -1,0 +1,64 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Admin Countries{% endblock %}
+
+{% block admin_nav %}
+{% if let Some(username) = current_admin %}
+<span class="me-3"><strong>{{ username }}</strong></span>
+<a href="/admin/logout" class="btn btn-sm btn-outline-light">Logout</a>
+{% else %}
+<a href="/admin/login" class="btn btn-sm btn-outline-light">Login</a>
+{% endif %}
+{% endblock %}
+
+{% block admin_links %}
+{% if let Some(_) = current_admin %}
+<li class="nav-item">
+    <a class="nav-link" href="/admin/users">Users</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="/admin/countries">Countries</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/admin/states">States</a>
+</li>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper animate-slide-up">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">{{ page_title }}</h1>
+        <a href="/admin/countries/new" class="btn btn-gradient">Create Country</a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover" style="width:100%">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in countries %}
+                <tr>
+                    <td>{{ c.id }}</td>
+                    <td>{{ c.name }}</td>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-2">
+                            <a href="/admin/countries/{{ c.id }}/edit" class="btn btn-sm btn-outline-primary">Edit</a>
+                            <form method="post" action="/admin/countries/{{ c.id }}/delete" class="d-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this country?');">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

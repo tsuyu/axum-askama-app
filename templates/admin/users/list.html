@@ -14,7 +14,13 @@
 {% block admin_links %}
 {% if let Some(_) = current_admin %}
 <li class="nav-item">
-    <a class="nav-link" href="/admin/users">Users</a>
+    <a class="nav-link active" href="/admin/users">Users</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/admin/countries">Countries</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/admin/states">States</a>
 </li>
 {% endif %}
 {% endblock %}

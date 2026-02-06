@@ -1,0 +1,76 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block admin_nav %}
+{% if let Some(username) = current_admin %}
+<span class="me-3"><strong>{{ username }}</strong></span>
+<a href="/admin/logout" class="btn btn-sm btn-outline-light">Logout</a>
+{% else %}
+<a href="/admin/login" class="btn btn-sm btn-outline-light">Login</a>
+{% endif %}
+{% endblock %}
+
+{% block admin_links %}
+{% if let Some(_) = current_admin %}
+<li class="nav-item">
+    <a class="nav-link" href="/admin/users">Users</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/admin/countries">Countries</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link active" href="/admin/states">States</a>
+</li>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="content-wrapper animate-slide-up mt-5">
+                <h1 class="text-center mb-4">{{ form_title }}</h1>
+
+                {% if let Some(error_msg) = error %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error_msg }}
+                </div>
+                {% endif %}
+
+                {% if let Some(success_msg) = success %}
+                <div class="alert alert-success" role="alert">
+                    {{ success_msg }}
+                </div>
+                {% endif %}
+
+                <form method="post" action="{{ form_action }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <div class="mb-3">
+                        <label for="country_id" class="form-label">Country</label>
+                        <select class="form-select" id="country_id" name="country_id" required>
+                            <option value="">Select country</option>
+                            {% for c in countries %}
+                            <option value="{{ c.id }}"{% if selected_country_id == c.id %} selected{% endif %}>{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">State Name</label>
+                        <input type="text" class="form-control" id="name" name="name" value="{% if let Some(n) = name %}{{ n }}{% endif %}" required autofocus>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-gradient btn-lg">{{ submit_label }}</button>
+                    </div>
+                </form>
+
+                <div class="text-center mt-4">
+                    <a href="/admin/states" class="text-decoration-none fw-bold">Back to States</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

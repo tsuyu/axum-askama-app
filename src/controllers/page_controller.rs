@@ -22,8 +22,10 @@ use crate::models::db::{self, PaginationParams};
 use crate::state::AppState;
 use crate::views::templates::{
     AdminCreateUserTemplate, AdminEditUserTemplate, AdminErrorTemplate, AdminLoginTemplate,
-    AdminUserDetailTemplate, AdminUsersListTemplate, ErrorTemplate, IndexTemplate, LoginTemplate,
-    RegisterTemplate, UpdatePasswordTemplate, User, CountryOption, StateOption,
+    AdminUserDetailTemplate, AdminUsersListTemplate, AdminCountriesListTemplate,
+    AdminCountryFormTemplate, AdminStatesListTemplate, AdminStateFormTemplate, AdminStateRow,
+    ErrorTemplate, IndexTemplate, LoginTemplate, RegisterTemplate, UpdatePasswordTemplate, User,
+    CountryOption, StateOption,
 };
 
 const CSRF_KEY: &str = "csrf_token";
@@ -55,6 +57,13 @@ async fn validate_csrf(session: &Session, token: &str) -> bool {
 
 const CACHE_TTL_SECONDS: i64 = 300;
 
+fn map_country_options(countries: Vec<db::Country>) -> Vec<CountryOption> {
+    countries
+        .into_iter()
+        .map(|c| CountryOption { id: c.id, name: c.name })
+        .collect()
+}
+
 async fn get_countries_cached(state: &AppState) -> Result<Vec<CountryOption>, StatusCode> {
     let key = "geo:countries";
     if let Ok(Some(json)) = state.redis.get::<Option<String>, _>(key).await {
@@ -66,10 +75,7 @@ async fn get_countries_cached(state: &AppState) -> Result<Vec<CountryOption>, St
     let countries = db::get_countries(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let options: Vec<CountryOption> = countries
-        .into_iter()
-        .map(|c| CountryOption { id: c.id, name: c.name })
-        .collect();
+    let options = map_country_options(countries);
 
     if let Ok(json) = serde_json::to_string(&options) {
         let _ : () = state
@@ -109,6 +115,16 @@ async fn get_states_cached(state: &AppState, country_id: i32) -> Result<Vec<Stat
     Ok(options)
 }
 
+async fn invalidate_geo_cache(state: &AppState) {
+    let _: Result<(), _> = state.redis.del("geo:countries").await;
+    if let Ok(countries) = db::get_countries(&state.db).await {
+        for country in countries {
+            let key = format!("geo:states:{}", country.id);
+            let _: Result<(), _> = state.redis.del(key).await;
+        }
+    }
+}
+
 // Index handler
 pub async fn index(OptionalAuthUser(user): OptionalAuthUser) -> impl IntoResponse {
     let template = IndexTemplate {
@@ -128,6 +144,580 @@ pub async fn users_list(admin_user: AdminUser) -> impl IntoResponse {
     };
 
     template
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct CountryForm {
+    #[validate(length(min = 1))]
+    name: String,
+    #[validate(length(min = 1))]
+    csrf_token: String,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct StateForm {
+    #[validate(range(min = 1))]
+    country_id: i32,
+    #[validate(length(min = 1))]
+    name: String,
+    #[validate(length(min = 1))]
+    csrf_token: String,
+}
+
+// Countries list (admin)
+pub async fn admin_countries_list(
+    admin_user: AdminUser,
+    State(state): State<AppState>,
+    session: Session,
+) -> impl IntoResponse {
+    let countries = match db::get_countries(&state.db).await {
+        Ok(rows) => map_country_options(rows),
+        Err(_) => {
+            let template = AdminErrorTemplate {
+                error_code: 500,
+                error_message: "Failed to load countries.".to_string(),
+                current_admin: Some(admin_user.username),
+            };
+            return (StatusCode::INTERNAL_SERVER_ERROR, template).into_response();
+        }
+    };
+
+    AdminCountriesListTemplate {
+        page_title: "Countries".to_string(),
+        current_admin: Some(admin_user.username),
+        csrf_token: ensure_csrf_token(&session).await,
+        countries,
+    }
+    .into_response()
+}
+
+// Country create page (GET)
+pub async fn admin_country_create_page(
+    admin_user: AdminUser,
+    session: Session,
+) -> impl IntoResponse {
+    AdminCountryFormTemplate {
+        form_title: "Create Country".to_string(),
+        form_action: "/admin/countries".to_string(),
+        submit_label: "Create Country".to_string(),
+        country_id: None,
+        name: None,
+        error: None,
+        success: None,
+        current_admin: Some(admin_user.username),
+        csrf_token: ensure_csrf_token(&session).await,
+    }
+    .into_response()
+}
+
+// Country create submission (POST)
+pub async fn admin_country_create_submit(
+    admin_user: AdminUser,
+    State(state): State<AppState>,
+    session: Session,
+    Form(form): Form<CountryForm>,
+) -> impl IntoResponse {
+    let name = form.name.clone();
+    if !validate_csrf(&session, &form.csrf_token).await {
+        return AdminCountryFormTemplate {
+            form_title: "Create Country".to_string(),
+            form_action: "/admin/countries".to_string(),
+            submit_label: "Create Country".to_string(),
+            country_id: None,
+            name: Some(name.clone()),
+            error: Some("Invalid CSRF token".to_string()),
+            success: None,
+            current_admin: Some(admin_user.username),
+            csrf_token: ensure_csrf_token(&session).await,
+        }
+        .into_response();
+    }
+
+    if form.validate().is_err() {
+        return AdminCountryFormTemplate {
+            form_title: "Create Country".to_string(),
+            form_action: "/admin/countries".to_string(),
+            submit_label: "Create Country".to_string(),
+            country_id: None,
+            name: Some(name.clone()),
+            error: Some("Invalid country name".to_string()),
+            success: None,
+            current_admin: Some(admin_user.username),
+            csrf_token: ensure_csrf_token(&session).await,
+        }
+        .into_response();
+    }
+
+    if let Err(_) = db::create_country(&state.db, &form.name).await {
+        return AdminCountryFormTemplate {
+            form_title: "Create Country".to_string(),
+            form_action: "/admin/countries".to_string(),
+            submit_label: "Create Country".to_string(),
+            country_id: None,
+            name: Some(name.clone()),
+            error: Some("Failed to create country".to_string()),
+            success: None,
+            current_admin: Some(admin_user.username),
+            csrf_token: ensure_csrf_token(&session).await,
+        }
+        .into_response();
+    }
+
+    invalidate_geo_cache(&state).await;
+    Redirect::to("/admin/countries").into_response()
+}
+
+// Country edit page (GET)
+pub async fn admin_country_edit_page(
+    admin_user: AdminUser,
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    session: Session,
+) -> impl IntoResponse {
+    let country = match db::get_country_by_id(&state.db, id).await {
+        Ok(Some(country)) => country,
+        Ok(None) => {
+            let template = AdminErrorTemplate {
+                error_code: 404,
+                error_message: "Country not found.".to_string(),
+                current_admin: Some(admin_user.username),
+            };
+            return (StatusCode::NOT_FOUND, template).into_response();
+        }
+        Err(_) => {
+            let template = AdminErrorTemplate {
+                error_code: 500,
+                error_message: "Failed to load country.".to_string(),
+                current_admin: Some(admin_user.username),
+            };
+            return (StatusCode::INTERNAL_SERVER_ERROR, template).into_response();
+        }
+    };
+
+    AdminCountryFormTemplate {
+        form_title: "Edit Country".to_string(),
+        form_action: format!("/admin/countries/{}", id),
+        submit_label: "Save Changes".to_string(),
+        country_id: Some(country.id),
+        name: Some(country.name),
+        error: None,
+        success: None,
+        current_admin: Some(admin_user.username),
+        csrf_token: ensure_csrf_token(&session).await,
+    }
+    .into_response()
+}
+
+// Country edit submission (POST)
+pub async fn admin_country_edit_submit(
+    admin_user: AdminUser,
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    session: Session,
+    Form(form): Form<CountryForm>,
+) -> impl IntoResponse {
+    let name = form.name.clone();
+    if !validate_csrf(&session, &form.csrf_token).await {
+        return AdminCountryFormTemplate {
+            form_title: "Edit Country".to_string(),
+            form_action: format!("/admin/countries/{}", id),
+            submit_label: "Save Changes".to_string(),
+            country_id: Some(id),
+            name: Some(name.clone()),
+            error: Some("Invalid CSRF token".to_string()),
+            success: None,
+            current_admin: Some(admin_user.username),
+            csrf_token: ensure_csrf_token(&session).await,
+        }
+        .into_response();
+    }
+
+    if form.validate().is_err() {
+        return AdminCountryFormTemplate {
+            form_title: "Edit Country".to_string(),
+            form_action: format!("/admin/countries/{}", id),
+            submit_label: "Save Changes".to_string(),
+            country_id: Some(id),
+            name: Some(name.clone()),
+            error: Some("Invalid country name".to_string()),
+            success: None,
+            current_admin: Some(admin_user.username),
+            csrf_token: ensure_csrf_token(&session).await,
+        }
+        .into_response();
+    }
+
+    if let Err(_) = db::update_country(&state.db, id, &form.name).await {
+        return AdminCountryFormTemplate {
+            form_title: "Edit Country".to_string(),
+            form_action: format!("/admin/countries/{}", id),
+            submit_label: "Save Changes".to_string(),
+            country_id: Some(id),
+            name: Some(name.clone()),
+            error: Some("Failed to update country".to_string()),
+            success: None,
+            current_admin: Some(admin_user.username),
+            csrf_token: ensure_csrf_token(&session).await,
+        }
+        .into_response();
+    }
+
+    invalidate_geo_cache(&state).await;
+    Redirect::to("/admin/countries").into_response()
+}
+
+// Country delete (POST)
+pub async fn admin_country_delete(
+    admin_user: AdminUser,
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    session: Session,
+    Form(form): Form<CsrfOnlyForm>,
+) -> impl IntoResponse {
+    if !validate_csrf(&session, &form.csrf_token).await {
+        let template = AdminErrorTemplate {
+            error_code: 403,
+            error_message: "Invalid CSRF token".to_string(),
+            current_admin: Some(admin_user.username),
+        };
+        return (StatusCode::FORBIDDEN, template).into_response();
+    }
+
+    if let Ok(count) = db::count_states_by_country_id(&state.db, id).await {
+        if count > 0 {
+            let template = AdminErrorTemplate {
+                error_code: 400,
+                error_message: "Cannot delete country with existing states.".to_string(),
+                current_admin: Some(admin_user.username),
+            };
+            return (StatusCode::BAD_REQUEST, template).into_response();
+        }
+    }
+
+    if let Ok(count) = db::count_users_by_country_id(&state.db, id).await {
+        if count > 0 {
+            let template = AdminErrorTemplate {
+                error_code: 400,
+                error_message: "Cannot delete country assigned to users.".to_string(),
+                current_admin: Some(admin_user.username),
+            };
+            return (StatusCode::BAD_REQUEST, template).into_response();
+        }
+    }
+
+    if let Err(_) = db::delete_country(&state.db, id).await {
+        let template = AdminErrorTemplate {
+            error_code: 500,
+            error_message: "Failed to delete country.".to_string(),
+            current_admin: Some(admin_user.username),
+        };
+        return (StatusCode::INTERNAL_SERVER_ERROR, template).into_response();
+    }
+
+    invalidate_geo_cache(&state).await;
+    Redirect::to("/admin/countries").into_response()
+}
+
+// States list (admin)
+pub async fn admin_states_list(
+    admin_user: AdminUser,
+    State(state): State<AppState>,
+    session: Session,
+) -> impl IntoResponse {
+    let states = match db::get_states_with_countries(&state.db).await {
+        Ok(rows) => rows
+            .into_iter()
+            .map(|s| AdminStateRow {
+                id: s.id,
+                country_id: s.country_id,
+                country_name: s.country_name,
+                name: s.name,
+            })
+            .collect(),
+        Err(_) => {
+            let template = AdminErrorTemplate {
+                error_code: 500,
+                error_message: "Failed to load states.".to_string(),
+                current_admin: Some(admin_user.username),
+            };
+            return (StatusCode::INTERNAL_SERVER_ERROR, template).into_response();
+        }
+    };
+
+    AdminStatesListTemplate {
+        page_title: "States".to_string(),
+        current_admin: Some(admin_user.username),
+        csrf_token: ensure_csrf_token(&session).await,
+        states,
+    }
+    .into_response()
+}
+
+// State create page (GET)
+pub async fn admin_state_create_page(
+    admin_user: AdminUser,
+    State(state): State<AppState>,
+    session: Session,
+) -> impl IntoResponse {
+    let countries = match db::get_countries(&state.db).await {
+        Ok(rows) => map_country_options(rows),
+        Err(_) => Vec::new(),
+    };
+
+    AdminStateFormTemplate {
+        form_title: "Create State".to_string(),
+        form_action: "/admin/states".to_string(),
+        submit_label: "Create State".to_string(),
+        state_id: None,
+        name: None,
+        countries,
+        selected_country_id: 0,
+        error: None,
+        success: None,
+        current_admin: Some(admin_user.username),
+        csrf_token: ensure_csrf_token(&session).await,
+    }
+    .into_response()
+}
+
+// State create submission (POST)
+pub async fn admin_state_create_submit(
+    admin_user: AdminUser,
+    State(state): State<AppState>,
+    session: Session,
+    Form(form): Form<StateForm>,
+) -> impl IntoResponse {
+    let name = form.name.clone();
+    if !validate_csrf(&session, &form.csrf_token).await {
+        let countries = db::get_countries(&state.db)
+            .await
+            .map(map_country_options)
+            .unwrap_or_default();
+        return AdminStateFormTemplate {
+            form_title: "Create State".to_string(),
+            form_action: "/admin/states".to_string(),
+            submit_label: "Create State".to_string(),
+            state_id: None,
+            name: Some(name.clone()),
+            countries,
+            selected_country_id: form.country_id,
+            error: Some("Invalid CSRF token".to_string()),
+            success: None,
+            current_admin: Some(admin_user.username),
+            csrf_token: ensure_csrf_token(&session).await,
+        }
+        .into_response();
+    }
+
+    if form.validate().is_err() {
+        let countries = db::get_countries(&state.db)
+            .await
+            .map(map_country_options)
+            .unwrap_or_default();
+        return AdminStateFormTemplate {
+            form_title: "Create State".to_string(),
+            form_action: "/admin/states".to_string(),
+            submit_label: "Create State".to_string(),
+            state_id: None,
+            name: Some(name.clone()),
+            countries,
+            selected_country_id: form.country_id,
+            error: Some("Invalid state data".to_string()),
+            success: None,
+            current_admin: Some(admin_user.username),
+            csrf_token: ensure_csrf_token(&session).await,
+        }
+        .into_response();
+    }
+
+    if let Err(_) = db::create_state(&state.db, form.country_id, &form.name).await {
+        let countries = db::get_countries(&state.db)
+            .await
+            .map(map_country_options)
+            .unwrap_or_default();
+        return AdminStateFormTemplate {
+            form_title: "Create State".to_string(),
+            form_action: "/admin/states".to_string(),
+            submit_label: "Create State".to_string(),
+            state_id: None,
+            name: Some(name.clone()),
+            countries,
+            selected_country_id: form.country_id,
+            error: Some("Failed to create state".to_string()),
+            success: None,
+            current_admin: Some(admin_user.username),
+            csrf_token: ensure_csrf_token(&session).await,
+        }
+        .into_response();
+    }
+
+    invalidate_geo_cache(&state).await;
+    Redirect::to("/admin/states").into_response()
+}
+
+// State edit page (GET)
+pub async fn admin_state_edit_page(
+    admin_user: AdminUser,
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    session: Session,
+) -> impl IntoResponse {
+    let state_row = match db::get_state_by_id(&state.db, id).await {
+        Ok(Some(row)) => row,
+        Ok(None) => {
+            let template = AdminErrorTemplate {
+                error_code: 404,
+                error_message: "State not found.".to_string(),
+                current_admin: Some(admin_user.username),
+            };
+            return (StatusCode::NOT_FOUND, template).into_response();
+        }
+        Err(_) => {
+            let template = AdminErrorTemplate {
+                error_code: 500,
+                error_message: "Failed to load state.".to_string(),
+                current_admin: Some(admin_user.username),
+            };
+            return (StatusCode::INTERNAL_SERVER_ERROR, template).into_response();
+        }
+    };
+
+    let countries = db::get_countries(&state.db)
+        .await
+        .map(map_country_options)
+        .unwrap_or_default();
+
+    AdminStateFormTemplate {
+        form_title: "Edit State".to_string(),
+        form_action: format!("/admin/states/{}", id),
+        submit_label: "Save Changes".to_string(),
+        state_id: Some(state_row.id),
+        name: Some(state_row.name),
+        countries,
+        selected_country_id: state_row.country_id,
+        error: None,
+        success: None,
+        current_admin: Some(admin_user.username),
+        csrf_token: ensure_csrf_token(&session).await,
+    }
+    .into_response()
+}
+
+// State edit submission (POST)
+pub async fn admin_state_edit_submit(
+    admin_user: AdminUser,
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    session: Session,
+    Form(form): Form<StateForm>,
+) -> impl IntoResponse {
+    let name = form.name.clone();
+    if !validate_csrf(&session, &form.csrf_token).await {
+        let countries = db::get_countries(&state.db)
+            .await
+            .map(map_country_options)
+            .unwrap_or_default();
+        return AdminStateFormTemplate {
+            form_title: "Edit State".to_string(),
+            form_action: format!("/admin/states/{}", id),
+            submit_label: "Save Changes".to_string(),
+            state_id: Some(id),
+            name: Some(name.clone()),
+            countries,
+            selected_country_id: form.country_id,
+            error: Some("Invalid CSRF token".to_string()),
+            success: None,
+            current_admin: Some(admin_user.username),
+            csrf_token: ensure_csrf_token(&session).await,
+        }
+        .into_response();
+    }
+
+    if form.validate().is_err() {
+        let countries = db::get_countries(&state.db)
+            .await
+            .map(map_country_options)
+            .unwrap_or_default();
+        return AdminStateFormTemplate {
+            form_title: "Edit State".to_string(),
+            form_action: format!("/admin/states/{}", id),
+            submit_label: "Save Changes".to_string(),
+            state_id: Some(id),
+            name: Some(name.clone()),
+            countries,
+            selected_country_id: form.country_id,
+            error: Some("Invalid state data".to_string()),
+            success: None,
+            current_admin: Some(admin_user.username),
+            csrf_token: ensure_csrf_token(&session).await,
+        }
+        .into_response();
+    }
+
+    if let Err(_) = db::update_state(&state.db, id, form.country_id, &form.name).await {
+        let countries = db::get_countries(&state.db)
+            .await
+            .map(map_country_options)
+            .unwrap_or_default();
+        return AdminStateFormTemplate {
+            form_title: "Edit State".to_string(),
+            form_action: format!("/admin/states/{}", id),
+            submit_label: "Save Changes".to_string(),
+            state_id: Some(id),
+            name: Some(name.clone()),
+            countries,
+            selected_country_id: form.country_id,
+            error: Some("Failed to update state".to_string()),
+            success: None,
+            current_admin: Some(admin_user.username),
+            csrf_token: ensure_csrf_token(&session).await,
+        }
+        .into_response();
+    }
+
+    invalidate_geo_cache(&state).await;
+    Redirect::to("/admin/states").into_response()
+}
+
+// State delete (POST)
+pub async fn admin_state_delete(
+    admin_user: AdminUser,
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    session: Session,
+    Form(form): Form<CsrfOnlyForm>,
+) -> impl IntoResponse {
+    if !validate_csrf(&session, &form.csrf_token).await {
+        let template = AdminErrorTemplate {
+            error_code: 403,
+            error_message: "Invalid CSRF token".to_string(),
+            current_admin: Some(admin_user.username),
+        };
+        return (StatusCode::FORBIDDEN, template).into_response();
+    }
+
+    if let Ok(count) = db::count_users_by_state_id(&state.db, id).await {
+        if count > 0 {
+            let template = AdminErrorTemplate {
+                error_code: 400,
+                error_message: "Cannot delete state assigned to users.".to_string(),
+                current_admin: Some(admin_user.username),
+            };
+            return (StatusCode::BAD_REQUEST, template).into_response();
+        }
+    }
+
+    if let Err(_) = db::delete_state(&state.db, id).await {
+        let template = AdminErrorTemplate {
+            error_code: 500,
+            error_message: "Failed to delete state.".to_string(),
+            current_admin: Some(admin_user.username),
+        };
+        return (StatusCode::INTERNAL_SERVER_ERROR, template).into_response();
+    }
+
+    invalidate_geo_cache(&state).await;
+    Redirect::to("/admin/states").into_response()
 }
 
 // Create user page (GET) - requires authentication
