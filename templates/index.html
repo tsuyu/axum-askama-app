@@ -13,6 +13,24 @@
 {% endif %}
 {% endblock %}
 
+{% block extra_scripts %}
+{% if let Some(msg) = flash_success %}
+<script>
+    window.addEventListener('load', () => {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: '{{ msg }}',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="content-wrapper animate-slide-up">
     <div class="hero">

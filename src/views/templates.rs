@@ -18,6 +18,7 @@ pub struct IndexTemplate {
     pub title: String,
     pub message: String,
     pub user: Option<String>,
+    pub flash_success: Option<String>,
 }
 
 // Users list template

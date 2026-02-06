@@ -1,6 +1,6 @@
 use axum::{
     Form,
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     http::{HeaderMap, HeaderValue, StatusCode, header},
     response::{IntoResponse, Json, Redirect},
 };
@@ -66,7 +66,11 @@ fn map_country_options(countries: Vec<db::Country>) -> Vec<CountryOption> {
 
 async fn get_countries_cached(state: &AppState) -> Result<Vec<CountryOption>, StatusCode> {
     let key = "geo:countries";
-    if let Ok(Some(json)) = state.redis.get::<Option<String>, _>(key).await {
+    let cached: Option<String> = match state.redis.get(key).await {
+        Ok(value) => value,
+        Err(_) => None,
+    };
+    if let Some(json) = cached {
         if let Ok(cached) = serde_json::from_str::<Vec<CountryOption>>(&json) {
             return Ok(cached);
         }
@@ -78,11 +82,10 @@ async fn get_countries_cached(state: &AppState) -> Result<Vec<CountryOption>, St
     let options = map_country_options(countries);
 
     if let Ok(json) = serde_json::to_string(&options) {
-        let _ : () = state
+        let _ = state
             .redis
-            .set(key, json, Some(Expiration::EX(CACHE_TTL_SECONDS)), None, false)
-            .await
-            .unwrap_or(());
+            .set::<(), _, _>(key, json, Some(Expiration::EX(CACHE_TTL_SECONDS)), None, false)
+            .await;
     }
 
     Ok(options)
@@ -90,7 +93,11 @@ async fn get_countries_cached(state: &AppState) -> Result<Vec<CountryOption>, St
 
 async fn get_states_cached(state: &AppState, country_id: i32) -> Result<Vec<StateOption>, StatusCode> {
     let key = format!("geo:states:{}", country_id);
-    if let Ok(Some(json)) = state.redis.get::<Option<String>, _>(key.as_str()).await {
+    let cached: Option<String> = match state.redis.get(key.clone()).await {
+        Ok(value) => value,
+        Err(_) => None,
+    };
+    if let Some(json) = cached {
         if let Ok(cached) = serde_json::from_str::<Vec<StateOption>>(&json) {
             return Ok(cached);
         }
@@ -105,11 +112,10 @@ async fn get_states_cached(state: &AppState, country_id: i32) -> Result<Vec<Stat
         .collect();
 
     if let Ok(json) = serde_json::to_string(&options) {
-        let _ : () = state
+        let _ = state
             .redis
-            .set(key.as_str(), json, Some(Expiration::EX(CACHE_TTL_SECONDS)), None, false)
-            .await
-            .unwrap_or(());
+            .set::<(), _, _>(key, json, Some(Expiration::EX(CACHE_TTL_SECONDS)), None, false)
+            .await;
     }
 
     Ok(options)
@@ -126,11 +132,23 @@ async fn invalidate_geo_cache(state: &AppState) {
 }
 
 // Index handler
-pub async fn index(OptionalAuthUser(user): OptionalAuthUser) -> impl IntoResponse {
+pub async fn index(
+    OptionalAuthUser(user): OptionalAuthUser,
+    Extension(session): Extension<Session>,
+) -> impl IntoResponse {
+    let flash_success = match session.get::<String>("flash_success").await {
+        Ok(Some(msg)) => {
+            let _ = session.remove::<String>("flash_success").await;
+            Some(msg)
+        }
+        _ => None,
+    };
+
     let template = IndexTemplate {
         title: "Welcome".to_string(),
         message: "Hello from Axum + Askama!".to_string(),
         user: user.map(|u| u.username),
+        flash_success,
     };
 
     template
@@ -168,7 +186,7 @@ pub struct StateForm {
 pub async fn admin_countries_list(
     admin_user: AdminUser,
     State(state): State<AppState>,
-    session: Session,
+    Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     let countries = match db::get_countries(&state.db).await {
         Ok(rows) => map_country_options(rows),
@@ -194,7 +212,7 @@ pub async fn admin_countries_list(
 // Country create page (GET)
 pub async fn admin_country_create_page(
     admin_user: AdminUser,
-    session: Session,
+    Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     AdminCountryFormTemplate {
         form_title: "Create Country".to_string(),
@@ -214,7 +232,7 @@ pub async fn admin_country_create_page(
 pub async fn admin_country_create_submit(
     admin_user: AdminUser,
     State(state): State<AppState>,
-    session: Session,
+    Extension(session): Extension<Session>,
     Form(form): Form<CountryForm>,
 ) -> impl IntoResponse {
     let name = form.name.clone();
@@ -272,7 +290,7 @@ pub async fn admin_country_edit_page(
     admin_user: AdminUser,
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    session: Session,
+    Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     let country = match db::get_country_by_id(&state.db, id).await {
         Ok(Some(country)) => country,
@@ -313,7 +331,7 @@ pub async fn admin_country_edit_submit(
     admin_user: AdminUser,
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    session: Session,
+    Extension(session): Extension<Session>,
     Form(form): Form<CountryForm>,
 ) -> impl IntoResponse {
     let name = form.name.clone();
@@ -371,7 +389,7 @@ pub async fn admin_country_delete(
     admin_user: AdminUser,
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    session: Session,
+    Extension(session): Extension<Session>,
     Form(form): Form<CsrfOnlyForm>,
 ) -> impl IntoResponse {
     if !validate_csrf(&session, &form.csrf_token).await {
@@ -422,7 +440,7 @@ pub async fn admin_country_delete(
 pub async fn admin_states_list(
     admin_user: AdminUser,
     State(state): State<AppState>,
-    session: Session,
+    Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     let states = match db::get_states_with_countries(&state.db).await {
         Ok(rows) => rows
@@ -457,7 +475,7 @@ pub async fn admin_states_list(
 pub async fn admin_state_create_page(
     admin_user: AdminUser,
     State(state): State<AppState>,
-    session: Session,
+    Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     let countries = match db::get_countries(&state.db).await {
         Ok(rows) => map_country_options(rows),
@@ -484,7 +502,7 @@ pub async fn admin_state_create_page(
 pub async fn admin_state_create_submit(
     admin_user: AdminUser,
     State(state): State<AppState>,
-    session: Session,
+    Extension(session): Extension<Session>,
     Form(form): Form<StateForm>,
 ) -> impl IntoResponse {
     let name = form.name.clone();
@@ -560,7 +578,7 @@ pub async fn admin_state_edit_page(
     admin_user: AdminUser,
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    session: Session,
+    Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     let state_row = match db::get_state_by_id(&state.db, id).await {
         Ok(Some(row)) => row,
@@ -608,7 +626,7 @@ pub async fn admin_state_edit_submit(
     admin_user: AdminUser,
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    session: Session,
+    Extension(session): Extension<Session>,
     Form(form): Form<StateForm>,
 ) -> impl IntoResponse {
     let name = form.name.clone();
@@ -684,7 +702,7 @@ pub async fn admin_state_delete(
     admin_user: AdminUser,
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    session: Session,
+    Extension(session): Extension<Session>,
     Form(form): Form<CsrfOnlyForm>,
 ) -> impl IntoResponse {
     if !validate_csrf(&session, &form.csrf_token).await {
@@ -724,7 +742,7 @@ pub async fn admin_state_delete(
 pub async fn user_create_page(
     admin_user: AdminUser,
     State(state): State<AppState>,
-    session: Session,
+    Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     let csrf_token = ensure_csrf_token(&session).await;
     let countries = get_countries_cached(&state).await.unwrap_or_default();
@@ -768,7 +786,7 @@ pub struct CreateUserForm {
 pub async fn user_create_submit(
     admin_user: AdminUser,
     State(state): State<AppState>,
-    session: Session,
+    Extension(session): Extension<Session>,
     Form(new_user): Form<CreateUserForm>,
 ) -> impl IntoResponse {
     if !validate_csrf(&session, &new_user.csrf_token).await {
@@ -863,7 +881,7 @@ pub async fn user_detail(
     admin_user: AdminUser,
     State(state): State<AppState>,
     Path(id): Path<u32>,
-    session: Session,
+    Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     match db::find_user_by_id(&state.db, id as i32).await {
         Ok(Some(user)) => {
@@ -966,7 +984,7 @@ pub async fn user_edit_page(
     admin_user: AdminUser,
     State(state): State<AppState>,
     Path(id): Path<u32>,
-    session: Session,
+    Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     match db::find_user_by_id(&state.db, id as i32).await {
         Ok(Some(user)) => {
@@ -1017,7 +1035,7 @@ pub async fn user_edit_submit(
     admin_user: AdminUser,
     State(state): State<AppState>,
     Path(id): Path<u32>,
-    session: Session,
+    Extension(session): Extension<Session>,
     Form(form): Form<UpdateUserForm>,
 ) -> impl IntoResponse {
     if !validate_csrf(&session, &form.csrf_token).await {
@@ -1183,7 +1201,7 @@ pub async fn user_delete(
     _admin_user: AdminUser,
     State(state): State<AppState>,
     Path(id): Path<u32>,
-    session: Session,
+    Extension(session): Extension<Session>,
     Form(form): Form<CsrfOnlyForm>,
 ) -> impl IntoResponse {
     if !validate_csrf(&session, &form.csrf_token).await {
@@ -1210,7 +1228,7 @@ pub async fn user_delete(
 // Admin login page (GET)
 pub async fn admin_login_page(
     OptionalAdminUser(user): OptionalAdminUser,
-    session: Session,
+    Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     let csrf_token = ensure_csrf_token(&session).await;
     if user.is_some() {
@@ -1227,7 +1245,7 @@ pub async fn admin_login_page(
 // Admin login form submission (POST)
 pub async fn admin_login_submit(
     State(state): State<AppState>,
-    session: Session,
+    Extension(session): Extension<Session>,
     Form(credentials): Form<LoginForm>,
 ) -> impl IntoResponse {
     if !validate_csrf(&session, &credentials.csrf_token).await {
@@ -1281,7 +1299,7 @@ pub async fn admin_login_submit(
 }
 
 // Admin logout
-pub async fn admin_logout(session: Session) -> impl IntoResponse {
+pub async fn admin_logout(Extension(session): Extension<Session>) -> impl IntoResponse {
     let _ = AdminUser::logout(&session).await;
     Redirect::to("/admin/login")
 }
@@ -1294,7 +1312,7 @@ pub async fn admin_index(_admin_user: AdminUser) -> impl IntoResponse {
 // Login page (GET)
 pub async fn login_page(
     OptionalAuthUser(user): OptionalAuthUser,
-    session: Session,
+    Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     let csrf_token = ensure_csrf_token(&session).await;
     // If already logged in, redirect to home
@@ -1312,7 +1330,7 @@ pub async fn login_page(
 // Login form submission (POST)
 pub async fn login_submit(
     State(state): State<AppState>,
-    session: Session,
+    Extension(session): Extension<Session>,
     Form(credentials): Form<LoginForm>,
 ) -> impl IntoResponse {
     if !validate_csrf(&session, &credentials.csrf_token).await {
@@ -1375,7 +1393,7 @@ pub async fn login_submit(
 // Register page (GET)
 pub async fn register_page(
     OptionalAuthUser(user): OptionalAuthUser,
-    session: Session,
+    Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     let csrf_token = ensure_csrf_token(&session).await;
     // If already logged in, redirect to home
@@ -1393,7 +1411,7 @@ pub async fn register_page(
 // Register form submission (POST)
 pub async fn register_submit(
     State(state): State<AppState>,
-    session: Session,
+    Extension(session): Extension<Session>,
     Form(new_user): Form<RegisterForm>,
 ) -> impl IntoResponse {
     if !validate_csrf(&session, &new_user.csrf_token).await {
@@ -1438,6 +1456,9 @@ pub async fn register_submit(
                 return template.into_response();
             }
 
+            let _ = session
+                .insert("flash_success", "Registration successful!".to_string())
+                .await;
             Redirect::to("/").into_response()
         }
         Err(e) => {
@@ -1457,7 +1478,7 @@ pub async fn register_submit(
 }
 
 // Logout handler
-pub async fn logout(session: Session) -> impl IntoResponse {
+pub async fn logout(Extension(session): Extension<Session>) -> impl IntoResponse {
     let _ = AuthUser::logout(&session).await;
     Redirect::to("/login")
 }
@@ -1477,7 +1498,7 @@ pub struct UpdatePasswordForm {
 // Update password page (GET) - requires authentication
 pub async fn update_password_page(
     auth_user: AuthUser,
-    session: Session,
+    Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     let template = UpdatePasswordTemplate {
         error: None,
@@ -1493,7 +1514,7 @@ pub async fn update_password_page(
 pub async fn update_password_submit(
     auth_user: AuthUser,
     State(state): State<AppState>,
-    session: Session,
+    Extension(session): Extension<Session>,
     Form(form): Form<UpdatePasswordForm>,
 ) -> impl IntoResponse {
     if !validate_csrf(&session, &form.csrf_token).await {

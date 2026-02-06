@@ -7,7 +7,11 @@ mod state;
 use std::net::SocketAddr;
 use time::Duration;
 use tower_sessions::{Expiry, SessionManagerLayer};
-use tower_sessions_redis_store::{fred::prelude::*, RedisStore};
+use tower_sessions_redis_store::{
+    fred::interfaces::ClientLike,
+    fred::prelude::{RedisConfig, RedisPool},
+    RedisStore,
+};
 use crate::models::db;
 use crate::routes::app;
 use crate::state::AppState;
@@ -31,18 +35,23 @@ async fn main() {
     let redis_url =
         std::env::var("REDIS_URL").expect("REDIS_URL must be set in .env file");
     let redis_config = RedisConfig::from_url(redis_url.as_str()).expect("Invalid REDIS_URL");
-    let redis_pool = RedisPool::new(redis_config, None, None, None, 6)
+    let redis_pool: RedisPool = RedisPool::new(redis_config, None, None, None, 6)
         .expect("Failed to create Redis pool");
     let _redis_conn = redis_pool.connect();
-    redis_pool
-        .wait_for_connect()
-        .await
-        .expect("Failed to connect to Redis");
+    let connect_result: Result<(), tower_sessions_redis_store::fred::error::RedisError> =
+        redis_pool.wait_for_connect().await;
+    connect_result.expect("Failed to connect to Redis");
 
     let session_store = RedisStore::new(redis_pool.clone());
 
+    let session_timeout_secs: i64 = std::env::var("SESSION_TIMEOUT")
+        .ok()
+        .and_then(|val| val.parse::<i64>().ok())
+        .filter(|v| *v > 0)
+        .unwrap_or(60 * 60 * 24 * 7);
+
     let session_layer = SessionManagerLayer::new(session_store)
-        .with_expiry(Expiry::OnInactivity(Duration::days(7)));
+        .with_expiry(Expiry::OnInactivity(Duration::seconds(session_timeout_secs)));
 
     // Build our application with routes
     let app_state = AppState {

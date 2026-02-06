@@ -48,3 +48,21 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_scripts %}
+{% if let Some(error_msg) = error %}
+<script>
+    window.addEventListener('load', () => {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'error',
+            title: '{{ error_msg }}',
+            showConfirmButton: false,
+            timer: 3500,
+            timerProgressBar: true
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}
