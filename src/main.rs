@@ -14,7 +14,6 @@ use tower_sessions_redis_store::{
 };
 use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 use std::env;
-use crate::models::db;
 use crate::routes::app;
 use crate::state::AppState;
 
@@ -64,7 +63,7 @@ async fn main() {
         std::env::var("DATABASE_URL").expect("DATABASE_URL must be set in .env file");
 
     // Create database connection pool
-    let pool = db::create_pool(&database_url)
+    let pool = models::create_pool(&database_url)
         .await
         .expect("Failed to create database pool");
 

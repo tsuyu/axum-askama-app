@@ -8,7 +8,7 @@ use tower_sessions::Session;
 use validator::Validate;
 
 use crate::controllers::auth_controller::{AuthUser, OptionalAuthUser};
-use crate::models::db;
+use crate::models;
 use crate::state::AppState;
 use crate::views::templates::{
     ErrorTemplate, IndexTemplate, LoginTemplate, RegisterTemplate, UpdatePasswordTemplate,
@@ -80,10 +80,10 @@ pub async fn login_submit(
     }
 
     // Find user by username
-    match db::find_user_by_username(&state.db, &credentials.username).await {
+    match models::find_user_by_username(&state.db, &credentials.username).await {
         Ok(Some(user)) => {
             // Verify password
-            if db::verify_password_hash(&user.password_hash, &credentials.password).await {
+            if models::verify_password_hash(&user.password_hash, &credentials.password).await {
                 // Create auth user and login
                 let auth_user = AuthUser::new(user.id, user.username);
                 if let Err(_) = auth_user.login(&session).await {
@@ -161,7 +161,7 @@ pub async fn register_submit(
     }
 
     // Create user
-    match db::create_user(
+    match models::create_user(
         &state.db,
         &new_user.username,
         &new_user.email,
@@ -265,9 +265,9 @@ pub async fn update_password_submit(
         return template.into_response();
     }
 
-    match db::find_user_by_id(&state.db, auth_user.id).await {
+    match models::find_user_by_id(&state.db, auth_user.id).await {
         Ok(Some(user)) => {
-            if !db::verify_password_hash(&user.password_hash, &form.current_password).await {
+            if !models::verify_password_hash(&user.password_hash, &form.current_password).await {
                 let template = UpdatePasswordTemplate {
                     error: Some("Current password is incorrect".to_string()),
                     success: None,
@@ -277,7 +277,7 @@ pub async fn update_password_submit(
                 return template.into_response();
             }
 
-            match db::update_password(&state.db, auth_user.id, &form.new_password).await {
+            match models::update_password(&state.db, auth_user.id, &form.new_password).await {
                 Ok(_) => UpdatePasswordTemplate {
                     error: None,
                     success: Some("Password updated successfully".to_string()),

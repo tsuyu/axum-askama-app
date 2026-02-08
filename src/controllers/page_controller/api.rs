@@ -5,7 +5,7 @@ use axum::{
 };
 use time::format_description::well_known::Rfc3339;
 
-use crate::models::db;
+use crate::models;
 use crate::state::AppState;
 
 use super::shared::{DataTablesRequest, DataTablesResponse, UserRow};
@@ -30,7 +30,7 @@ pub async fn users_datatable_api(
         .unwrap_or("desc")
         .to_string();
 
-    let params = db::PaginationParams {
+    let params = models::PaginationParams {
         offset: request.start,
         limit: request.length,
         search: search_opt.clone(),
@@ -38,15 +38,15 @@ pub async fn users_datatable_api(
         order_direction,
     };
 
-    let total = match db::get_users_count(&state.db).await {
+    let total = match models::get_users_count(&state.db).await {
         Ok(total) => total,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    let filtered = match db::get_filtered_users_count(&state.db, &search_opt).await {
+    let filtered = match models::get_filtered_users_count(&state.db, &search_opt).await {
         Ok(count) => count,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
-    let users = match db::get_users_paginated(&state.db, &params).await {
+    let users = match models::get_users_paginated(&state.db, &params).await {
         Ok(rows) => rows,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
