@@ -1,6 +1,7 @@
 $(document).ready(function () {
     const countrySelect = $('#country_id');
     const stateSelect = $('#state_id');
+    const selectedStateId = stateSelect.data('selected'); // Store the original selected state
 
     async function loadStates(countryId) {
         stateSelect.prop('disabled', true);
@@ -18,19 +19,19 @@ $(document).ready(function () {
                 throw new Error('Failed to load states');
             }
             const states = await resp.json();
-            const selected = stateSelect.data('selected');
 
             states.forEach((s) => {
                 const option = $('<option></option>')
                     .attr('value', s.id)
                     .text(s.name);
-                if (selected && Number(selected) === s.id) {
+                if (selectedStateId && Number(selectedStateId) === s.id) {
                     option.attr('selected', 'selected');
                 }
                 stateSelect.append(option);
             });
         } catch (e) {
-            console.error(e);
+            console.error('Failed to load states:', e);
+            alert('Failed to load states. Please try again.');
         } finally {
             stateSelect.prop('disabled', false);
         }
@@ -38,10 +39,13 @@ $(document).ready(function () {
 
     countrySelect.on('change', function () {
         const countryId = $(this).val();
-        stateSelect.data('selected', null);
         loadStates(countryId);
     });
 
-    // initial load
-    loadStates(countrySelect.val());
+    // Only load states on page load if no states are pre-rendered or if country is empty
+    const hasStates = stateSelect.find('option').length > 1;
+    if (!hasStates && countrySelect.val()) {
+        loadStates(countrySelect.val());
+    }
 });
+

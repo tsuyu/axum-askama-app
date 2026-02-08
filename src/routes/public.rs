@@ -20,4 +20,8 @@ pub fn routes() -> Router<AppState> {
                 .post(page_controller::update_password_submit),
         )
         .route("/logout", get(page_controller::logout))
+        .route(
+            "/admin/login",
+            get(page_controller::admin_login_page).post(page_controller::admin_login_submit),
+        )
 }

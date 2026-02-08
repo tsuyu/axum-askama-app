@@ -6,10 +6,6 @@ use crate::state::AppState;
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(page_controller::admin_index))
-        .route(
-            "/login",
-            get(page_controller::admin_login_page).post(page_controller::admin_login_submit),
-        )
         .route("/logout", get(page_controller::admin_logout))
         .route(
             "/countries",
@@ -26,12 +22,15 @@ pub fn routes() -> Router<AppState> {
                 .post(page_controller::admin_state_create_submit),
         )
         .route("/states/new", get(page_controller::admin_state_create_page))
+        .route("/states/data", get(page_controller::admin_states_api))
+        .route("/geo/states", get(page_controller::admin_states_api))
         .route("/states/:id", post(page_controller::admin_state_edit_submit))
         .route("/states/:id/edit", get(page_controller::admin_state_edit_page))
         .route("/states/:id/delete", post(page_controller::admin_state_delete))
-        .route("/geo/states", get(page_controller::admin_states_api))
-        .route("/users/print", get(page_controller::admin_users_pdf))
-        .route("/users", get(page_controller::users_list).post(page_controller::user_create_submit))
+        .route(
+            "/users",
+            get(page_controller::users_list).post(page_controller::user_create_submit),
+        )
         .route("/users/new", get(page_controller::user_create_page))
         .route(
             "/users/:id",

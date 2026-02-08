@@ -38,15 +38,8 @@ $(document).ready(function () {
                 width: '25%',
                 render: function (data, type, row) {
                     if (type === 'display' || type === 'filter') {
-                        // Format the datetime for display
-                        const date = new Date(data);
-                        return date.toLocaleString('en-MY', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        });
+                        // Data is already formatted as 'dd-mm-yyyy hh:mm:ss' from backend
+                        return data || 'N/A';
                     }
                     return data;
                 }

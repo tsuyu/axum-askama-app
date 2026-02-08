@@ -1,5 +1,5 @@
 use axum::Router;
-use tower_http::services::ServeDir;
+use tower_http::{services::ServeDir, trace::TraceLayer};
 use tower_sessions::SessionManagerLayer;
 use tower_sessions_redis_store::{fred::prelude::RedisPool, RedisStore};
 use crate::state::AppState;
@@ -18,6 +18,7 @@ pub fn app(
         .nest("/api", api::routes())
         .nest_service("/static", ServeDir::new("static"))
         .fallback(crate::controllers::page_controller::handle_404)
+        .layer(TraceLayer::new_for_http())
         .layer(session_layer)
         .with_state(state)
 }

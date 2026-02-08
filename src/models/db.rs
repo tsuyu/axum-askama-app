@@ -1,7 +1,34 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use validator::Validate;
 use sqlx::{MySqlPool, mysql::MySqlPoolOptions};
 use time::OffsetDateTime;
+
+// Custom serializer for OffsetDateTime
+fn serialize_datetime<S>(dt: &OffsetDateTime, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let formatted = dt.format(&time::format_description::parse("[day]-[month]-[year] [hour]:[minute]:[second]")
+        .unwrap())
+        .unwrap_or_else(|_| "Invalid Date".to_string());
+    serializer.serialize_str(&formatted)
+}
+
+// Custom serializer for Option<OffsetDateTime>
+fn serialize_datetime_option<S>(dt: &Option<OffsetDateTime>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match dt {
+        Some(date_time) => {
+            let formatted = date_time.format(&time::format_description::parse("[day]-[month]-[year] [hour]:[minute]:[second]")
+                .unwrap())
+                .unwrap_or_else(|_| "Invalid Date".to_string());
+            serializer.serialize_str(&formatted)
+        }
+        None => serializer.serialize_none(),
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct User {
@@ -9,6 +36,7 @@ pub struct User {
     pub username: String,
     pub email: String,
     pub password_hash: String,
+    #[serde(serialize_with = "serialize_datetime")]
     pub created_at: OffsetDateTime,
     pub address: Option<String>,
     pub country_id: Option<i32>,
@@ -21,6 +49,7 @@ pub struct Admin {
     pub username: String,
     pub email: String,
     pub password_hash: String,
+    #[serde(serialize_with = "serialize_datetime_option")]
     pub created_at: Option<OffsetDateTime>,
 }
 

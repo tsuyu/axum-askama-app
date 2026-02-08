@@ -12,12 +12,51 @@ use tower_sessions_redis_store::{
     fred::prelude::{RedisConfig, RedisPool},
     RedisStore,
 };
+use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
+use std::env;
 use crate::models::db;
 use crate::routes::app;
 use crate::state::AppState;
 
 #[tokio::main]
 async fn main() {
+    let env_name = env::var("APP_ENV").unwrap_or_else(|_| "development".to_string());
+    let log_dir = env::var("LOG_DIR").ok();
+
+    // Set default log level based on environment
+    let default_filter = if env_name == "development" {
+        "debug,sqlx=info,tower_http=info"
+    } else {
+        "info,tower_http=info"
+    };
+
+    let filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(default_filter));
+
+    let registry = tracing_subscriber::registry().with(filter);
+    let mut _log_guard: Option<tracing_appender::non_blocking::WorkerGuard> = None;
+
+    if env_name == "production" || log_dir.is_some() {
+        let dir = log_dir.unwrap_or_else(|| "logs".to_string());
+        if let Err(err) = std::fs::create_dir_all(&dir) {
+            eprintln!("Failed to create log dir {}: {}", dir, err);
+        }
+        let file_appender = tracing_appender::rolling::daily(dir, "app.log");
+        let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+        _log_guard = Some(guard);
+
+        registry
+            .with(fmt::layer().with_writer(non_blocking).with_ansi(false))
+            .init();
+
+    } else {
+        registry
+            .with(fmt::layer().pretty().with_thread_ids(true).with_target(true))
+            .init();
+    }
+
+    tracing::info!("Application starting in {} mode", env_name);
+
     // Load environment variables
     dotenvy::dotenv().ok();
 
@@ -29,7 +68,7 @@ async fn main() {
         .await
         .expect("Failed to create database pool");
 
-    println!("Database connection established");
+    tracing::info!("Database connection established");
 
     // Create Redis session store
     let redis_url =
@@ -61,12 +100,21 @@ async fn main() {
     let app = app(app_state, session_layer);
 
     // Run it
-    let port: u16 = std::env::var("PORT")
+    let host = std::env::var("APP_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let port: u16 = std::env::var("APP_PORT")
         .ok()
         .and_then(|val| val.parse().ok())
+        .or_else(|| {
+            std::env::var("PORT")
+                .ok()
+                .and_then(|val| val.parse().ok())
+        })
         .unwrap_or(3001);
-    let addr = SocketAddr::from(([127, 0, 0, 1], port));
-    println!("Listening on http://{}", addr);
+
+    let addr: SocketAddr = format!("{host}:{port}")
+        .parse()
+        .expect("Invalid APP_HOST/APP_PORT");
+    tracing::info!("Listening on http://{}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
