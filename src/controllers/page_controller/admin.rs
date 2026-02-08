@@ -11,7 +11,7 @@ use tower_sessions::Session;
 use validator::Validate;
 
 use crate::controllers::auth_controller::{AdminUser, OptionalAdminUser};
-use crate::models;
+use crate::models::{self, DatatableParams, DatatableResponse};
 use crate::state::AppState;
 use crate::views::templates::{
     AdminCreateUserTemplate, AdminEditUserTemplate, AdminErrorTemplate, AdminLoginTemplate,
@@ -37,30 +37,6 @@ pub async fn users_list(admin_user: AdminUser) -> impl IntoResponse {
     template
 }
 
-// Users datatable API for AJAX requests
-#[derive(serde::Serialize)]
-pub struct DatatableResponse<T> {
-    draw: u32,
-    #[serde(rename = "recordsTotal")]
-    records_total: i64,
-    #[serde(rename = "recordsFiltered")]
-    records_filtered: i64,
-    data: Vec<T>,
-}
-
-#[derive(serde::Deserialize)]
-pub struct DatatableParams {
-    draw: u32,
-    start: Option<i64>,
-    length: Option<i64>,
-    #[serde(rename = "search[value]")]
-    search_value: Option<String>,
-    #[serde(rename = "order[0][column]")]
-    order_column: Option<i32>,
-    #[serde(rename = "order[0][dir]")]
-    order_dir: Option<String>,
-}
-
 pub async fn users_datatable_api(
     admin_user: AdminUser,
     State(state): State<AppState>,
@@ -71,7 +47,7 @@ pub async fn users_datatable_api(
     let draw = params.draw;
     let offset = params.start.unwrap_or(0);
     let limit = params.length.unwrap_or(10);
-    let search = params.search_value.filter(|s| !s.is_empty());
+    let search = params.search_value.filter(|s: &String| !s.is_empty());
 
     // Get total count
     let total_count = match models::get_users_count(&state.db).await {

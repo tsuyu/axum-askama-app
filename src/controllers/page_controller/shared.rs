@@ -11,6 +11,13 @@ use crate::models;
 use crate::state::AppState;
 use crate::views::templates::{CountryOption, StateOption};
 
+// Re-export form and request/response structs from entities for convenience
+pub(crate) use crate::models::{
+    CountryForm, StateForm, CreateUserForm, LoginForm, RegisterForm, CsrfOnlyForm,
+    UpdateUserForm, UpdatePasswordForm, DataTablesRequest, DataTablesSearch, DataTablesOrder,
+    StatesQuery, DataTablesResponseLegacy, UserRow, PdfExportParams,
+};
+
 const CSRF_KEY: &str = "csrf_token";
 const CACHE_TTL_SECONDS: i64 = 300;
 
@@ -116,149 +123,3 @@ pub(crate) async fn invalidate_geo_cache(state: &AppState) {
     }
 }
 
-#[derive(Debug, Deserialize, Validate)]
-pub(crate) struct CountryForm {
-    #[validate(length(min = 1))]
-    pub(crate) name: String,
-    #[validate(length(min = 1))]
-    pub(crate) csrf_token: String,
-}
-
-#[derive(Debug, Deserialize, Validate)]
-pub(crate) struct StateForm {
-    #[validate(range(min = 1))]
-    pub(crate) country_id: i32,
-    #[validate(length(min = 1))]
-    pub(crate) name: String,
-    #[validate(length(min = 1))]
-    pub(crate) csrf_token: String,
-}
-
-#[derive(Debug, Deserialize, Validate)]
-pub(crate) struct CreateUserForm {
-    #[validate(length(min = 1))]
-    pub(crate) username: String,
-    #[validate(email)]
-    pub(crate) email: String,
-    #[validate(length(min = 6))]
-    pub(crate) password: String,
-    #[validate(length(min = 1))]
-    pub(crate) address: String,
-    #[validate(range(min = 1))]
-    pub(crate) country_id: i32,
-    #[validate(range(min = 1))]
-    pub(crate) state_id: i32,
-    #[validate(length(min = 1))]
-    pub(crate) csrf_token: String,
-}
-
-#[derive(Debug, Deserialize, Validate)]
-pub(crate) struct LoginForm {
-    #[validate(length(min = 1))]
-    pub(crate) username: String,
-    #[validate(length(min = 6))]
-    pub(crate) password: String,
-    #[validate(length(min = 1))]
-    pub(crate) csrf_token: String,
-}
-
-#[derive(Debug, Deserialize, Validate)]
-pub(crate) struct RegisterForm {
-    #[validate(length(min = 1))]
-    pub(crate) username: String,
-    #[validate(email)]
-    pub(crate) email: String,
-    #[validate(length(min = 6))]
-    pub(crate) password: String,
-    #[validate(length(min = 1))]
-    pub(crate) csrf_token: String,
-}
-
-#[derive(Debug, Deserialize, Validate)]
-pub(crate) struct CsrfOnlyForm {
-    #[validate(length(min = 1))]
-    pub(crate) csrf_token: String,
-}
-
-#[derive(Debug, Deserialize, Validate)]
-pub(crate) struct UpdateUserForm {
-    #[validate(length(min = 1))]
-    pub(crate) username: String,
-    #[validate(email)]
-    pub(crate) email: String,
-    #[validate(length(min = 1))]
-    pub(crate) address: String,
-    #[validate(range(min = 1))]
-    pub(crate) country_id: i32,
-    #[validate(range(min = 1))]
-    pub(crate) state_id: i32,
-    #[serde(default)]
-    pub(crate) new_password: String,
-    #[validate(length(min = 1))]
-    pub(crate) csrf_token: String,
-}
-
-#[derive(Debug, Deserialize, Validate)]
-pub(crate) struct UpdatePasswordForm {
-    #[validate(length(min = 6))]
-    pub(crate) current_password: String,
-    #[validate(length(min = 6))]
-    pub(crate) new_password: String,
-    #[validate(length(min = 6))]
-    pub(crate) confirm_password: String,
-    #[validate(length(min = 1))]
-    pub(crate) csrf_token: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct DataTablesRequest {
-    pub(crate) draw: i32,
-    pub(crate) start: i64,
-    pub(crate) length: i64,
-    #[serde(default)]
-    pub(crate) search: DataTablesSearch,
-    #[serde(default)]
-    pub(crate) order: Vec<DataTablesOrder>,
-}
-
-#[derive(Debug, Deserialize, Default)]
-pub(crate) struct DataTablesSearch {
-    #[serde(default)]
-    pub(crate) value: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct DataTablesOrder {
-    pub(crate) column: usize,
-    pub(crate) dir: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct StatesQuery {
-    pub(crate) country_id: i32,
-}
-
-#[derive(Debug, Serialize)]
-pub(crate) struct DataTablesResponse {
-    pub(crate) draw: i32,
-    #[serde(rename = "recordsTotal")]
-    pub(crate) records_total: i64,
-    #[serde(rename = "recordsFiltered")]
-    pub(crate) records_filtered: i64,
-    pub(crate) data: Vec<UserRow>,
-}
-
-#[derive(Debug, Serialize)]
-pub(crate) struct UserRow {
-    pub(crate) id: i32,
-    pub(crate) username: String,
-    pub(crate) email: String,
-    pub(crate) created_at: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct PdfExportParams {
-    pub(crate) search: Option<String>,
-    pub(crate) order_column: Option<String>,
-    pub(crate) order_direction: Option<String>,
-}

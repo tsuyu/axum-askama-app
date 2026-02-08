@@ -1,15 +1,8 @@
 use askama::Template;
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Serialize, Clone)]
-pub struct User {
-    pub id: u32,
-    pub name: String,
-    pub email: String,
-    pub address: Option<String>,
-    pub country: Option<String>,
-    pub state: Option<String>,
-}
+// Re-export view data structures from entities
+pub use crate::models::{UserView as User, CountryOption, StateOption, AdminStateRow};
 
 // Index page template
 #[derive(Template)]
@@ -133,27 +126,6 @@ pub struct AdminEditUserTemplate {
     pub selected_country_id: i32,
     pub selected_state_id: i32,
     pub address: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct CountryOption {
-    pub id: i32,
-    pub name: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct StateOption {
-    pub id: i32,
-    pub country_id: i32,
-    pub name: String,
-}
-
-#[derive(Debug, Serialize, Clone)]
-pub struct AdminStateRow {
-    pub id: i32,
-    pub country_id: i32,
-    pub country_name: String,
-    pub name: String,
 }
 
 #[derive(Template)]
