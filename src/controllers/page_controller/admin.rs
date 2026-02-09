@@ -12,6 +12,7 @@ use validator::Validate;
 
 use crate::controllers::auth_controller::{AdminUser, OptionalAdminUser};
 use crate::models::{self, DatatableParams, DatatableResponse};
+use crate::repository;
 use crate::state::AppState;
 use crate::views::templates::{
     AdminCreateUserTemplate, AdminEditUserTemplate, AdminErrorTemplate,
@@ -50,7 +51,7 @@ pub async fn users_datatable_api(
     let search = params.search_value.filter(|s: &String| !s.is_empty());
 
     // Get total count
-    let total_count = match models::get_users_count(&state.db).await {
+    let total_count = match repository::get_users_count(&state.db).await {
         Ok(count) => count,
         Err(e) => {
             tracing::error!("Failed to get users count: {:?}", e);
@@ -86,7 +87,7 @@ pub async fn users_datatable_api(
     };
 
     // Get paginated users
-    match models::get_users_paginated(&state.db, &pagination_params).await {
+    match repository::get_users_paginated(&state.db, &pagination_params).await {
         Ok(users) => {
             let filtered_count = users.len() as i64;
             tracing::info!(
@@ -119,7 +120,7 @@ pub async fn admin_countries_list(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
-    let countries = match models::get_countries(&state.db).await {
+    let countries = match repository::get_countries(&state.db).await {
         Ok(rows) => map_country_options(rows),
         Err(_) => {
             let template = AdminErrorTemplate {
@@ -197,7 +198,7 @@ pub async fn admin_country_create_submit(
         .into_response();
     }
 
-    if let Err(_) = models::create_country(&state.db, &form.name).await {
+    if let Err(_) = repository::create_country(&state.db, &form.name).await {
         return AdminCountryFormTemplate {
             form_title: "Create Country".to_string(),
             form_action: "/admin/countries".to_string(),
@@ -223,7 +224,7 @@ pub async fn admin_country_edit_page(
     Path(id): Path<i32>,
     Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
-    let country = match models::get_country_by_id(&state.db, id).await {
+    let country = match repository::get_country_by_id(&state.db, id).await {
         Ok(Some(country)) => country,
         Ok(None) => {
             let template = AdminErrorTemplate {
@@ -296,7 +297,7 @@ pub async fn admin_country_edit_submit(
         .into_response();
     }
 
-    if let Err(_) = models::update_country(&state.db, id, &form.name).await {
+    if let Err(_) = repository::update_country(&state.db, id, &form.name).await {
         return AdminCountryFormTemplate {
             form_title: "Edit Country".to_string(),
             form_action: format!("/admin/countries/{}", id),
@@ -332,7 +333,7 @@ pub async fn admin_country_delete(
         return (StatusCode::FORBIDDEN, template).into_response();
     }
 
-    if let Ok(count) = models::count_states_by_country_id(&state.db, id).await {
+    if let Ok(count) = repository::count_states_by_country_id(&state.db, id).await {
         if count > 0 {
             let template = AdminErrorTemplate {
                 error_code: 400,
@@ -343,7 +344,7 @@ pub async fn admin_country_delete(
         }
     }
 
-    if let Ok(count) = models::count_users_by_country_id(&state.db, id).await {
+    if let Ok(count) = repository::count_users_by_country_id(&state.db, id).await {
         if count > 0 {
             let template = AdminErrorTemplate {
                 error_code: 400,
@@ -354,7 +355,7 @@ pub async fn admin_country_delete(
         }
     }
 
-    if let Err(_) = models::delete_country(&state.db, id).await {
+    if let Err(_) = repository::delete_country(&state.db, id).await {
         let template = AdminErrorTemplate {
             error_code: 500,
             error_message: "Failed to delete country.".to_string(),
@@ -395,7 +396,7 @@ pub async fn admin_states_list(
     State(state): State<AppState>,
     Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
-    let rows = match models::get_states_with_countries(&state.db).await {
+    let rows = match repository::get_states_with_countries(&state.db).await {
         Ok(rows) => rows,
         Err(_) => {
             let template = AdminErrorTemplate {
@@ -513,7 +514,7 @@ pub async fn admin_state_create_submit(
         .into_response();
     }
 
-    if let Err(_) = models::create_state(&state.db, form.country_id, &form.name).await {
+    if let Err(_) = repository::create_state(&state.db, form.country_id, &form.name).await {
         return AdminStateFormTemplate {
             form_title: "Create State".to_string(),
             form_action: "/admin/states".to_string(),
@@ -541,7 +542,7 @@ pub async fn admin_state_edit_page(
     Path(id): Path<i32>,
     Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
-    let state_row = match models::get_state_by_id(&state.db, id).await {
+    let state_row = match repository::get_state_by_id(&state.db, id).await {
         Ok(Some(row)) => row,
         Ok(None) => {
             let template = AdminErrorTemplate {
@@ -643,7 +644,7 @@ pub async fn admin_state_edit_submit(
         .into_response();
     }
 
-    if let Err(_) = models::update_state(&state.db, id, form.country_id, &form.name).await {
+    if let Err(_) = repository::update_state(&state.db, id, form.country_id, &form.name).await {
         return AdminStateFormTemplate {
             form_title: "Edit State".to_string(),
             form_action: format!("/admin/states/{}", id),
@@ -681,7 +682,7 @@ pub async fn admin_state_delete(
         return (StatusCode::FORBIDDEN, template).into_response();
     }
 
-    if let Ok(count) = models::count_users_by_state_id(&state.db, id).await {
+    if let Ok(count) = repository::count_users_by_state_id(&state.db, id).await {
         if count > 0 {
             let template = AdminErrorTemplate {
                 error_code: 400,
@@ -692,7 +693,7 @@ pub async fn admin_state_delete(
         }
     }
 
-    if let Err(_) = models::delete_state(&state.db, id).await {
+    if let Err(_) = repository::delete_state(&state.db, id).await {
         let template = AdminErrorTemplate {
             error_code: 500,
             error_message: "Failed to delete state.".to_string(),
@@ -726,7 +727,7 @@ pub async fn admin_users_pdf(
     let order_column = params.order_column.as_deref().unwrap_or("id");
     let order_direction = params.order_direction.as_deref().unwrap_or("desc");
 
-    let users = match models::get_users_for_export(&state.db, &params.search, order_column, order_direction).await {
+    let users = match repository::get_users_for_export(&state.db, &params.search, order_column, order_direction).await {
         Ok(users) => users,
         Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     };
@@ -870,7 +871,7 @@ pub async fn user_create_submit(
         .into_response();
     }
 
-    match models::create_user(
+    match repository::create_user(
         &state.db,
         &form.username,
         &form.email,
@@ -913,7 +914,7 @@ pub async fn user_detail(
     Path(id): Path<i32>,
     Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
-    let user = match models::find_user_by_id(&state.db, id).await {
+    let user = match repository::find_user_by_id(&state.db, id).await {
         Ok(Some(user)) => user,
         Ok(None) => {
             let template = AdminErrorTemplate {
@@ -934,7 +935,7 @@ pub async fn user_detail(
     };
 
     let country = if let Some(country_id) = user.country_id {
-        models::get_country_by_id(&state.db, country_id)
+        repository::get_country_by_id(&state.db, country_id)
             .await
             .ok()
             .flatten()
@@ -944,7 +945,7 @@ pub async fn user_detail(
     };
 
     let state_name = if let Some(state_id) = user.state_id {
-        models::get_state_by_id(&state.db, state_id)
+        repository::get_state_by_id(&state.db, state_id)
             .await
             .ok()
             .flatten()
@@ -977,7 +978,7 @@ pub async fn user_edit_page(
     Path(id): Path<i32>,
     Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
-    let user = match models::find_user_by_id(&state.db, id).await {
+    let user = match repository::find_user_by_id(&state.db, id).await {
         Ok(Some(user)) => user,
         Ok(None) => {
             let template = AdminErrorTemplate {
@@ -1093,7 +1094,7 @@ pub async fn user_edit_submit(
         .into_response();
     }
 
-    if let Err(_) = models::update_user(
+    if let Err(_) = repository::update_user(
         &state.db,
         id,
         &form.username,
@@ -1122,7 +1123,7 @@ pub async fn user_edit_submit(
     }
 
     if !form.new_password.trim().is_empty() {
-        if let Err(_) = models::update_password(&state.db, id, &form.new_password).await {
+        if let Err(_) = repository::update_password(&state.db, id, &form.new_password).await {
             return AdminEditUserTemplate {
                 error: Some("Failed to update password".to_string()),
                 success: None,
@@ -1161,7 +1162,7 @@ pub async fn user_delete(
         return (StatusCode::FORBIDDEN, template).into_response();
     }
 
-    if let Err(_) = models::delete_user(&state.db, id).await {
+    if let Err(_) = repository::delete_user(&state.db, id).await {
         let template = AdminErrorTemplate {
             error_code: 500,
             error_message: "Failed to delete user.".to_string(),

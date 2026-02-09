@@ -1,5 +1,8 @@
 mod controllers;
 mod models;
+mod repository;
+mod pool;
+mod utils;
 mod views;
 mod routes;
 mod state;
@@ -63,7 +66,7 @@ async fn main() {
         std::env::var("DATABASE_URL").expect("DATABASE_URL must be set in .env file");
 
     // Create database connection pool
-    let pool = models::create_pool(&database_url)
+    let pool = pool::create_pool(&database_url)
         .await
         .expect("Failed to create database pool");
 

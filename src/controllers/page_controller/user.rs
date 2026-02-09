@@ -8,7 +8,9 @@ use validator::Validate;
 
 use crate::controllers::auth_controller::AuthUser;
 use crate::models;
+use crate::repository;
 use crate::state::AppState;
+use crate::utils;
 use crate::views::templates::{UpdatePasswordTemplate, UserDashboardTemplate};
 
 use super::shared::{ensure_csrf_token, validate_csrf, UpdatePasswordForm};
@@ -72,9 +74,9 @@ pub async fn update_password_submit(
         return template.into_response();
     }
 
-    match models::find_user_by_id(&state.db, auth_user.id).await {
+    match repository::find_user_by_id(&state.db, auth_user.id).await {
         Ok(Some(user)) => {
-            if !models::verify_password_hash(&user.password_hash, &form.current_password).await {
+            if !utils::verify_password_hash(&user.password_hash, &form.current_password).await {
                 let template = UpdatePasswordTemplate {
                     error: Some("Current password is incorrect".to_string()),
                     success: None,
@@ -84,7 +86,7 @@ pub async fn update_password_submit(
                 return template.into_response();
             }
 
-            match models::update_password(&state.db, auth_user.id, &form.new_password).await {
+            match repository::update_password(&state.db, auth_user.id, &form.new_password).await {
                 Ok(_) => UpdatePasswordTemplate {
                     error: None,
                     success: Some("Password updated successfully".to_string()),

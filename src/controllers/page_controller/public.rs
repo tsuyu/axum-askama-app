@@ -11,7 +11,9 @@ use crate::controllers::auth_controller::{
     AdminUser, AuthUser, OptionalAdminUser, OptionalAuthUser,
 };
 use crate::models;
+use crate::repository;
 use crate::state::AppState;
+use crate::utils;
 use crate::views::templates::{
     AdminLoginTemplate, ErrorTemplate, IndexTemplate, LoginTemplate, RegisterTemplate,
 };
@@ -98,10 +100,10 @@ pub async fn login_submit(
     }
 
     // Find user by username
-    match models::find_user_by_username(&state.db, &credentials.username).await {
+    match repository::find_user_by_username(&state.db, &credentials.username).await {
         Ok(Some(user)) => {
             // Verify password
-            if models::verify_password_hash(&user.password_hash, &credentials.password).await {
+            if utils::verify_password_hash(&user.password_hash, &credentials.password).await {
                 // Create auth user and login
                 let auth_user = AuthUser::new(user.id, user.username);
                 if let Err(_) = auth_user.login(&session).await {
@@ -173,10 +175,10 @@ pub async fn admin_login_submit(
         .into_response();
     }
 
-    match models::find_admin_by_username(&state.db, &credentials.username).await {
+    match repository::find_admin_by_username(&state.db, &credentials.username).await {
         Ok(Some(admin)) => {
             tracing::debug!("Admin user found: {}", admin.username);
-            if models::verify_password_hash(&admin.password_hash, &credentials.password).await {
+            if utils::verify_password_hash(&admin.password_hash, &credentials.password).await {
                 tracing::info!("Admin login successful: {}", admin.username);
                 let admin_user = AdminUser::new(admin.id, admin.username.clone());
                 if let Err(e) = admin_user.login(&session).await {
@@ -269,7 +271,7 @@ pub async fn register_submit(
     }
 
     // Create user
-    match models::create_user(
+    match repository::create_user(
         &state.db,
         &new_user.username,
         &new_user.email,

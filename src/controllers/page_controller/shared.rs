@@ -8,6 +8,7 @@ use tower_sessions_redis_store::fred::types::Expiration;
 use validator::Validate;
 
 use crate::models;
+use crate::repository;
 use crate::state::AppState;
 use crate::views::templates::{CountryOption, StateOption};
 
@@ -65,7 +66,7 @@ pub(crate) async fn get_countries_cached(state: &AppState) -> Result<Vec<Country
         }
     }
 
-    let countries = models::get_countries(&state.db)
+    let countries = repository::get_countries(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let options = map_country_options(countries);
@@ -95,7 +96,7 @@ pub(crate) async fn get_states_cached(
         }
     }
 
-    let states = models::get_states_by_country(&state.db, country_id)
+    let states = repository::get_states_by_country(&state.db, country_id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let options: Vec<StateOption> = states
@@ -115,11 +116,10 @@ pub(crate) async fn get_states_cached(
 
 pub(crate) async fn invalidate_geo_cache(state: &AppState) {
     let _: Result<(), _> = state.redis.del("geo:countries").await;
-    if let Ok(countries) = models::get_countries(&state.db).await {
+    if let Ok(countries) = repository::get_countries(&state.db).await {
         for country in countries {
             let key = format!("geo:states:{}", country.id);
             let _: Result<(), _> = state.redis.del(key).await;
         }
     }
 }
-
