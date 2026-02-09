@@ -132,32 +132,6 @@ The application will be available at: **http://127.0.0.1:3001**
 
 Click the "Logout" link in the navigation bar.
 
-## Project Structure
-
-```
-axum-askama-app/
-├── src/
-│   ├── main.rs                 # Application entry point
-│   ├── state.rs                # Shared app state (DB + Redis)
-│   ├── controllers/            # Request handlers
-│   │   ├── auth_controller.rs  # Session auth helpers
-│   │   └── page_controller.rs  # Page + form handlers
-│   ├── models/                 # Data access layer
-│   │   └── db.rs               # Database operations
-│   ├── routes/                 # Route wiring
-│   │   ├── admin.rs
-│   │   ├── public.rs
-│   │   └── mod.rs
-│   └── views/                  # Askama templates
-│       ├── templates.rs
-│       └── mod.rs
-├── templates/                  # HTML templates
-├── static/                     # Static assets
-├── schema.sql                  # Database schema
-├── .env                        # Environment variables
-└── Cargo.toml                  # Dependencies
-
-```
 
 ## Security Features
 
