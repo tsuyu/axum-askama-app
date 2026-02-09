@@ -31,6 +31,7 @@ pub fn routes() -> Router<AppState> {
             "/users",
             get(page_controller::users_list).post(page_controller::user_create_submit),
         )
+        .route("/users/print", get(page_controller::admin_users_pdf))
         .route("/users/new", get(page_controller::user_create_page))
         .route(
             "/users/:id",
