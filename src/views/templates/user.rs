@@ -64,7 +64,7 @@ pub struct UpdatePasswordTemplate {
 
 // User dashboard template
 #[derive(Template)]
-#[template(path = "users/user_dashbord.html")]
+#[template(path = "users/dashboard.html")]
 pub struct UserDashboardTemplate {
     pub current_user: Option<String>,
 }
