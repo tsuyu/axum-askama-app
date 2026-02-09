@@ -10,3 +10,14 @@ pub struct Admin {
     #[serde(serialize_with = "crate::utils::serialize_datetime_option")]
     pub created_at: Option<OffsetDateTime>,
 }
+
+#[derive(Debug, Serialize, Clone)]
+pub struct AdminStateRow {
+    pub id: i32,
+    pub country_id: i32,
+    pub country_name: String,
+    pub name: String,
+}
+
+
+

@@ -2,24 +2,17 @@ pub mod admin;
 pub mod country;
 pub mod datatable;
 pub mod forms;
-pub mod pagination;
 pub mod queries;
-pub mod view;
 pub mod state;
 pub mod user;
 
-pub use admin::Admin;
-pub use country::Country;
+pub use admin::{Admin, AdminStateRow};
+pub use country::{Country, CountryForm, CountryOption};
 pub use datatable::{
-    DatatableParams, DatatableResponse, DataTablesOrder, DataTablesRequest, DataTablesResponseLegacy,
-    DataTablesSearch, UserRow,
+    DataTablesOrder, DataTablesRequest, DataTablesResponseLegacy, DataTablesSearch,
+    DatatableParams, DatatableResponse, PaginationParams, UserRow,
 };
-pub use forms::{
-    CountryForm, CreateUserForm, CsrfOnlyForm, LoginForm, RegisterForm, StateForm,
-    UpdatePasswordForm, UpdateUserForm,
-};
-pub use pagination::PaginationParams;
-pub use queries::{PdfExportParams, StatesQuery};
-pub use state::{State, StateWithCountry};
-pub use user::User;
-pub use view::{AdminStateRow, CountryOption, StateOption, UserView};
+pub use forms::{CsrfOnlyForm, LoginForm};
+pub use queries::PdfExportParams;
+pub use state::{State, StateForm, StateOption, StateWithCountry, StatesQuery};
+pub use user::{CreateUserForm, RegisterForm, UpdatePasswordForm, UpdateUserForm, User, UserView};

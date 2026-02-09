@@ -57,6 +57,16 @@ pub struct DataTablesResponseLegacy {
     pub data: Vec<UserRow>,
 }
 
+#[derive(Debug)]
+pub struct PaginationParams {
+    pub offset: i64,
+    pub limit: i64,
+    pub search: Option<String>,
+    pub order_column: String,
+    pub order_direction: String,
+}
+
+
 #[derive(Debug, Serialize)]
 pub struct UserRow {
     pub id: i32,
