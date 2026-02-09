@@ -1,11 +1,11 @@
-{% extends "base.html" %}
+{% extends "users/base.html" %}
 
 {% block title %}Create User{% endblock %}
 
 {% block user_nav %}
 {% if let Some(username) = current_user %}
 <span class="me-3"><strong>{{ username }}</strong></span>
-<a href="/password" class="btn btn-sm btn-outline-secondary me-2">Change Password</a>
+<a href="/user/password" class="btn btn-sm btn-outline-secondary me-2">Change Password</a>
 <a href="/logout" class="btn btn-sm btn-outline-primary">Logout</a>
 {% else %}
 <a href="/login" class="btn btn-sm btn-outline-primary me-2">Login</a>

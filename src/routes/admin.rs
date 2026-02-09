@@ -6,6 +6,7 @@ use crate::state::AppState;
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(page_controller::admin_index))
+        .route("/dashboard", get(page_controller::admin_dashboard))
         .route("/logout", get(page_controller::admin_logout))
         .route(
             "/countries",

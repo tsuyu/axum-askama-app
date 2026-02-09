@@ -1,0 +1,43 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block admin_nav %}
+{% if let Some(username) = current_admin %}
+<span class="me-3"><strong>{{ username }}</strong></span>
+<a href="/admin/logout" class="btn btn-sm btn-outline-light">Logout</a>
+{% else %}
+<a href="/admin/login" class="btn btn-sm btn-outline-light">Login</a>
+{% endif %}
+{% endblock %}
+
+{% block admin_links %}
+{% if let Some(_) = current_admin %}
+<li class="nav-item">
+    <a class="nav-link active" href="/admin/dashboard">Dashboard</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/admin/users">Users</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/admin/countries">Countries</a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="/admin/states">States</a>
+</li>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper animate-slide-up">
+    <div class="hero">
+        <h1 class="display-4 mb-3">Admin Dashboard</h1>
+        <p class="lead mb-4">Welcome back{% if let Some(username) = current_admin %}, {{ username }}{% endif %}.</p>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="/admin/users" class="btn btn-dark text-white">Manage Users</a>
+            <a href="/admin/countries" class="btn btn-outline-dark">Manage Countries</a>
+            <a href="/admin/states" class="btn btn-outline-dark">Manage States</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

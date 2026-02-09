@@ -5,7 +5,7 @@
 {% block user_nav %}
 {% if let Some(username) = user %}
 <span class="me-3"><strong>{{ username }}</strong></span>
-<a href="/password" class="btn btn-sm btn-outline-secondary me-2">Change Password</a>
+<a href="/user/password" class="btn btn-sm btn-outline-secondary me-2">Change Password</a>
 <a href="/logout" class="btn btn-sm btn-outline-primary">Logout</a>
 {% else %}
 <a href="/login" class="btn btn-sm btn-outline-primary me-2">Login</a>
@@ -36,7 +36,6 @@
     <div class="hero">
         <h1 class="display-3 mb-4">{{ title }}</h1>
         <p class="lead mb-4">{{ message }}</p>
-        <a href="/admin/login" class="btn btn-gradient btn-lg px-5">Admin Login</a>
     </div>
 </div>
 {% endblock %}

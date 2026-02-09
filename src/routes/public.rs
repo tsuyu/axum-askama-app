@@ -14,14 +14,9 @@ pub fn routes() -> Router<AppState> {
             "/register",
             get(page_controller::register_page).post(page_controller::register_submit),
         )
-        .route(
-            "/password",
-            get(page_controller::update_password_page)
-                .post(page_controller::update_password_submit),
-        )
         .route("/logout", get(page_controller::logout))
         .route(
-            "/admin/login",
+            "/loginadmin",
             get(page_controller::admin_login_page).post(page_controller::admin_login_submit),
         )
 }

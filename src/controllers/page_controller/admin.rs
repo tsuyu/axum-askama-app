@@ -17,7 +17,7 @@ use crate::views::templates::{
     AdminCreateUserTemplate, AdminEditUserTemplate, AdminErrorTemplate, AdminLoginTemplate,
     AdminUserDetailTemplate, AdminUsersListTemplate, AdminCountriesListTemplate,
     AdminCountryFormTemplate, AdminStatesListTemplate, AdminStateFormTemplate, AdminStateRow,
-    User, CountryOption, StateOption,
+    AdminDashboardTemplate, User, CountryOption, StateOption,
 };
 
 use super::shared::{
@@ -370,9 +370,9 @@ pub async fn admin_country_delete(
 // Admin index
 pub async fn admin_index(OptionalAdminUser(admin_user): OptionalAdminUser) -> impl IntoResponse {
     if admin_user.is_some() {
-        Redirect::to("/admin/users").into_response()
+        Redirect::to("/admin/dashboard").into_response()
     } else {
-        Redirect::to("/admin/login").into_response()
+        Redirect::to("/loginadmin").into_response()
     }
 }
 
@@ -382,7 +382,7 @@ pub async fn admin_login_page(
     Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     if admin_user.is_some() {
-        return Redirect::to("/admin/users").into_response();
+        return Redirect::to("/admin/dashboard").into_response();
     }
 
     AdminLoginTemplate {
@@ -433,8 +433,8 @@ pub async fn admin_login_submit(
                     .into_response();
                 }
 
-                tracing::info!("Admin session created, redirecting to /admin/users");
-                Redirect::to("/admin/users").into_response()
+                tracing::info!("Admin session created, redirecting to /admin/dashboard");
+                Redirect::to("/admin/dashboard").into_response()
             } else {
                 tracing::warn!("Admin login failed: Invalid password for {}", credentials.username);
                 AdminLoginTemplate {
@@ -466,7 +466,14 @@ pub async fn admin_login_submit(
 // Admin logout
 pub async fn admin_logout(Extension(session): Extension<Session>) -> impl IntoResponse {
     let _ = AdminUser::logout(&session).await;
-    Redirect::to("/admin/login")
+    Redirect::to("/loginadmin")
+}
+
+// Admin dashboard (GET) - requires authentication
+pub async fn admin_dashboard(admin_user: AdminUser) -> impl IntoResponse {
+    AdminDashboardTemplate {
+        current_admin: Some(admin_user.username),
+    }
 }
 
 // States list (admin)

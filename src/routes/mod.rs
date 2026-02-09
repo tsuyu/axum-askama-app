@@ -7,6 +7,7 @@ use crate::state::AppState;
 mod admin;
 mod api;
 mod public;
+mod user;
 
 pub fn app(
     state: AppState,
@@ -14,6 +15,7 @@ pub fn app(
 ) -> Router {
     Router::new()
         .merge(public::routes())
+        .nest("/user", user::routes())
         .nest("/admin", admin::routes())
         .nest("/api", api::routes())
         .nest_service("/static", ServeDir::new("static"))

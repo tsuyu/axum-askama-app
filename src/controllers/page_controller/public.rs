@@ -12,6 +12,7 @@ use crate::models;
 use crate::state::AppState;
 use crate::views::templates::{
     ErrorTemplate, IndexTemplate, LoginTemplate, RegisterTemplate, UpdatePasswordTemplate,
+    UserDashboardTemplate,
 };
 
 use super::shared::{ensure_csrf_token, validate_csrf, LoginForm, RegisterForm, UpdatePasswordForm};
@@ -47,7 +48,7 @@ pub async fn login_page(
     let csrf_token = ensure_csrf_token(&session).await;
     // If already logged in, redirect to home
     if user.is_some() {
-        return Redirect::to("/").into_response();
+        return Redirect::to("/user/dashboard").into_response();
     }
 
     let template = LoginTemplate {
@@ -94,7 +95,7 @@ pub async fn login_submit(
                     return template.into_response();
                 }
 
-                return Redirect::to("/").into_response();
+                return Redirect::to("/user/dashboard").into_response();
             } else {
                 let template = LoginTemplate {
                     error: Some("Invalid username or password".to_string()),
@@ -128,7 +129,7 @@ pub async fn register_page(
     let csrf_token = ensure_csrf_token(&session).await;
     // If already logged in, redirect to home
     if user.is_some() {
-        return Redirect::to("/").into_response();
+        return Redirect::to("/user/dashboard").into_response();
     }
 
     let template = RegisterTemplate {
@@ -189,7 +190,7 @@ pub async fn register_submit(
             let _ = session
                 .insert("flash_success", "Registration successful!".to_string())
                 .await;
-            Redirect::to("/").into_response()
+            Redirect::to("/user/dashboard").into_response()
         }
         Err(e) => {
             let error_msg = if e.to_string().contains("Duplicate entry") {
@@ -211,6 +212,13 @@ pub async fn register_submit(
 pub async fn logout(Extension(session): Extension<Session>) -> impl IntoResponse {
     let _ = AuthUser::logout(&session).await;
     Redirect::to("/login")
+}
+
+// User dashboard (GET) - requires authentication
+pub async fn user_dashboard(auth_user: AuthUser) -> impl IntoResponse {
+    UserDashboardTemplate {
+        current_user: Some(auth_user.username),
+    }
 }
 
 // Update password page (GET) - requires authentication

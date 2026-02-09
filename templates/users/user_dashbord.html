@@ -1,0 +1,27 @@
+{% extends "users/base.html" %}
+
+{% block title %}User Dashboard{% endblock %}
+
+{% block user_nav %}
+{% if let Some(username) = current_user %}
+<span class="me-3"><strong>{{ username }}</strong></span>
+<a href="/user/password" class="btn btn-sm btn-outline-secondary me-2">Change Password</a>
+<a href="/logout" class="btn btn-sm btn-outline-primary">Logout</a>
+{% else %}
+<a href="/login" class="btn btn-sm btn-outline-primary me-2">Login</a>
+<a href="/register" class="btn btn-sm btn-gradient">Register</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper animate-slide-up">
+    <div class="hero">
+        <h1 class="display-4 mb-3">User Dashboard</h1>
+        <p class="lead mb-4">Welcome back{% if let Some(username) = current_user %}, {{ username }}{% endif %}.</p>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="/user/password" class="btn btn-outline-secondary">Change Password</a>
+            <a href="/logout" class="btn btn-outline-primary">Logout</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

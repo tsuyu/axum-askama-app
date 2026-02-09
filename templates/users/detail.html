@@ -1,11 +1,11 @@
-{% extends "base.html" %}
+{% extends "users/base.html" %}
 
 {% block title %}{{ user.name }} - User Profile{% endblock %}
 
 {% block user_nav %}
 {% if let Some(username) = current_user %}
 <strong>{{ username }}</strong>
-<a href="/password" style="color: #667eea; text-decoration: none; font-weight: 600; margin: 0 1rem;">Change Password</a>
+<a href="/user/password" style="color: #667eea; text-decoration: none; font-weight: 600; margin: 0 1rem;">Change Password</a>
 <a href="/logout" style="color: #667eea; text-decoration: none; font-weight: 600;">Logout</a>
 {% else %}
 <a href="/login" style="color: #667eea; text-decoration: none; font-weight: 600; margin-right: 1rem;">Login</a>
