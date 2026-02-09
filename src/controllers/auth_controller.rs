@@ -127,7 +127,7 @@ where
 
         Self::from_session(&session)
             .await
-            .ok_or_else(|| Redirect::to("/admin/login").into_response())
+            .ok_or_else(|| Redirect::to("/loginadmin").into_response())
     }
 }
 

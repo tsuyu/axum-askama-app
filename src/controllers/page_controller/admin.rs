@@ -14,7 +14,7 @@ use crate::controllers::auth_controller::{AdminUser, OptionalAdminUser};
 use crate::models::{self, DatatableParams, DatatableResponse};
 use crate::state::AppState;
 use crate::views::templates::{
-    AdminCreateUserTemplate, AdminEditUserTemplate, AdminErrorTemplate, AdminLoginTemplate,
+    AdminCreateUserTemplate, AdminEditUserTemplate, AdminErrorTemplate,
     AdminUserDetailTemplate, AdminUsersListTemplate, AdminCountriesListTemplate,
     AdminCountryFormTemplate, AdminStatesListTemplate, AdminStateFormTemplate, AdminStateRow,
     AdminDashboardTemplate, User, CountryOption, StateOption,
@@ -23,7 +23,7 @@ use crate::views::templates::{
 use super::shared::{
     ensure_csrf_token, validate_csrf, map_country_options, get_countries_cached,
     get_states_cached, invalidate_geo_cache, CountryForm, StateForm, CreateUserForm,
-    LoginForm, CsrfOnlyForm, UpdateUserForm, StatesQuery, PdfExportParams,
+    CsrfOnlyForm, UpdateUserForm, StatesQuery, PdfExportParams,
 };
 
 // Users list handler - requires authentication
@@ -376,97 +376,10 @@ pub async fn admin_index(OptionalAdminUser(admin_user): OptionalAdminUser) -> im
     }
 }
 
-// Admin login page (GET)
-pub async fn admin_login_page(
-    OptionalAdminUser(admin_user): OptionalAdminUser,
-    Extension(session): Extension<Session>,
-) -> impl IntoResponse {
-    if admin_user.is_some() {
-        return Redirect::to("/admin/dashboard").into_response();
-    }
-
-    AdminLoginTemplate {
-        error: None,
-        csrf_token: ensure_csrf_token(&session).await,
-    }
-    .into_response()
-}
-
-// Admin login submission (POST)
-pub async fn admin_login_submit(
-    State(state): State<AppState>,
-    Extension(session): Extension<Session>,
-    Form(credentials): Form<LoginForm>,
-) -> impl IntoResponse {
-    tracing::debug!("Admin login attempt for user: {}", credentials.username);
-    
-    if !validate_csrf(&session, &credentials.csrf_token).await {
-        tracing::warn!("Admin login failed: Invalid CSRF token");
-        return AdminLoginTemplate {
-            error: Some("Invalid CSRF token".to_string()),
-            csrf_token: ensure_csrf_token(&session).await,
-        }
-        .into_response();
-    }
-
-    if credentials.validate().is_err() {
-        tracing::warn!("Admin login failed: Invalid login data");
-        return AdminLoginTemplate {
-            error: Some("Invalid login data".to_string()),
-            csrf_token: ensure_csrf_token(&session).await,
-        }
-        .into_response();
-    }
-
-    match models::find_admin_by_username(&state.db, &credentials.username).await {
-        Ok(Some(admin)) => {
-            tracing::debug!("Admin user found: {}", admin.username);
-            if models::verify_password_hash(&admin.password_hash, &credentials.password).await {
-                tracing::info!("Admin login successful: {}", admin.username);
-                let admin_user = AdminUser::new(admin.id, admin.username.clone());
-                if let Err(e) = admin_user.login(&session).await {
-                    tracing::error!("Failed to set admin session: {:?}", e);
-                    return AdminLoginTemplate {
-                        error: Some("Session error. Please try again.".to_string()),
-                        csrf_token: ensure_csrf_token(&session).await,
-                    }
-                    .into_response();
-                }
-
-                tracing::info!("Admin session created, redirecting to /admin/dashboard");
-                Redirect::to("/admin/dashboard").into_response()
-            } else {
-                tracing::warn!("Admin login failed: Invalid password for {}", credentials.username);
-                AdminLoginTemplate {
-                    error: Some("Invalid username or password".to_string()),
-                    csrf_token: ensure_csrf_token(&session).await,
-                }
-                .into_response()
-            }
-        }
-        Ok(None) => {
-            tracing::warn!("Admin login failed: User not found - {}", credentials.username);
-            AdminLoginTemplate {
-                error: Some("Invalid username or password".to_string()),
-                csrf_token: ensure_csrf_token(&session).await,
-            }
-            .into_response()
-        }
-        Err(e) => {
-            tracing::error!("Admin login database error: {:?}", e);
-            AdminLoginTemplate {
-                error: Some("Database error. Please try again.".to_string()),
-                csrf_token: ensure_csrf_token(&session).await,
-            }
-            .into_response()
-        }
-    }
-}
-
 // Admin logout
 pub async fn admin_logout(Extension(session): Extension<Session>) -> impl IntoResponse {
     let _ = AdminUser::logout(&session).await;
-    Redirect::to("/loginadmin")
+    Redirect::to("/loginadmin").into_response()
 }
 
 // Admin dashboard (GET) - requires authentication

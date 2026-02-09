@@ -2,6 +2,7 @@
 name = "axum-askama-app"
 version = "0.1.0"
 edition = "2024"
+default-run = "axum-askama-app"
 
 [dependencies]
 axum = "0.7"
