@@ -125,8 +125,8 @@ The application will be available at: **http://127.0.0.1:3001**
 
 ### Protected Routes
 
-- `/users` - View all users (requires authentication)
-- `/users/:id` - View user details (requires authentication)
+- `/admin/users` - View all users (requires authentication)
+- `/admin/users/:id` - View user details (requires authentication)
 
 ### Logout
 
