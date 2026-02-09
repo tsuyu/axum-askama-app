@@ -1,6 +1,7 @@
 mod admin;
 mod public;
 mod shared;
+mod user;
 
 pub use admin::{
     admin_countries_list, admin_country_create_page, admin_country_create_submit,
@@ -13,6 +14,8 @@ pub use admin::{
 };
 pub use public::{
     index, login_page, login_submit, register_page, register_submit, logout,
-    update_password_page, update_password_submit, handle_404, user_dashboard,
-    admin_login_page, admin_login_submit,
+    handle_404, admin_login_page, admin_login_submit,
+};
+pub use user::{
+    user_dashboard, update_password_page, update_password_submit,
 };
