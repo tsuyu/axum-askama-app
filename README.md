@@ -2,6 +2,10 @@
 
 A modern web application built with Axum, Askama templates, and MySQL authentication.
 
+## Architecture Guide
+
+If you are using this repository as a boilerplate, follow `ARCHITECTURE_GUIDE.md` for project structure, conventions, and feature implementation flow.
+
 ## Features
 
 - ✨ Modern, responsive UI with gradient design
