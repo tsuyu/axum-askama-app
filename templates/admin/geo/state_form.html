@@ -5,22 +5,22 @@
 {% block admin_nav %}
 {% if let Some(username) = current_admin %}
 <span class="me-3"><strong>{{ username }}</strong></span>
-<a href="/admin/logout" class="btn btn-sm btn-outline-light">Logout</a>
+<a href="{{ "/admin/logout"|url }}" class="btn btn-sm btn-outline-light">Logout</a>
 {% else %}
-<a href="/admin/login" class="btn btn-sm btn-outline-light">Login</a>
+<a href="{{ "/loginadmin"|url }}" class="btn btn-sm btn-outline-light">Login</a>
 {% endif %}
 {% endblock %}
 
 {% block admin_links %}
 {% if let Some(_) = current_admin %}
 <li class="nav-item">
-    <a class="nav-link" href="/admin/users">Users</a>
+    <a class="nav-link" href="{{ "/admin/users"|url }}">Users</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link" href="/admin/countries">Countries</a>
+    <a class="nav-link" href="{{ "/admin/countries"|url }}">Countries</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link active" href="/admin/states">States</a>
+    <a class="nav-link active" href="{{ "/admin/states"|url }}">States</a>
 </li>
 {% endif %}
 {% endblock %}
@@ -44,7 +44,7 @@
                 </div>
                 {% endif %}
 
-                <form method="post" action="{{ form_action }}">
+                <form method="post" action="{{ form_action|url }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <div class="mb-3">
                         <label for="country_id" class="form-label">Country</label>
@@ -67,7 +67,7 @@
                 </form>
 
                 <div class="text-center mt-4">
-                    <a href="/admin/states" class="text-decoration-none fw-bold">Back to States</a>
+                    <a href="{{ "/admin/states"|url }}" class="text-decoration-none fw-bold">Back to States</a>
                 </div>
             </div>
         </div>

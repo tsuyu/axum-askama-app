@@ -56,7 +56,7 @@ where
 
         Self::from_session(&session)
             .await
-            .ok_or_else(|| Redirect::to("/login").into_response())
+            .ok_or_else(|| Redirect::to(&crate::filters::path("/login")).into_response())
     }
 }
 
@@ -127,7 +127,7 @@ where
 
         Self::from_session(&session)
             .await
-            .ok_or_else(|| Redirect::to("/loginadmin").into_response())
+            .ok_or_else(|| Redirect::to(&crate::filters::path("/loginadmin")).into_response())
     }
 }
 

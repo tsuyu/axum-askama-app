@@ -14,7 +14,8 @@ $(document).ready(function () {
         }
 
         try {
-            const resp = await fetch('/admin/geo/states?country_id=' + encodeURIComponent(countryId));
+            const basePath = window.BASE_PATH || '';
+            const resp = await fetch(basePath + '/admin/geo/states?country_id=' + encodeURIComponent(countryId));
             if (!resp.ok) {
                 throw new Error('Failed to load states');
             }
@@ -48,4 +49,3 @@ $(document).ready(function () {
         loadStates(countrySelect.val());
     }
 });
-

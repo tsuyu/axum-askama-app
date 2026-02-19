@@ -10,6 +10,7 @@ use validator::Validate;
 use crate::controllers::auth_controller::{
     AdminUser, AuthUser, OptionalAdminUser, OptionalAuthUser,
 };
+use crate::filters;
 use crate::models;
 use crate::repository;
 use crate::state::AppState;
@@ -33,14 +34,13 @@ pub async fn index(
         _ => None,
     };
 
-    let template = IndexTemplate {
+    IndexTemplate {
         title: "Welcome".to_string(),
         message: "Hello from Axum + Askama!".to_string(),
         user: user.map(|u| u.username),
         flash_success,
-    };
-
-    template
+    }
+    .into_response()
 }
 
 // Login page (GET)
@@ -51,7 +51,7 @@ pub async fn login_page(
     let csrf_token = ensure_csrf_token(&session).await;
     // If already logged in, redirect to home
     if user.is_some() {
-        return Redirect::to("/user/dashboard").into_response();
+        return Redirect::to(&filters::path("/user/dashboard")).into_response();
     }
 
     let template = LoginTemplate {
@@ -67,7 +67,7 @@ pub async fn admin_login_page(
     Extension(session): Extension<Session>,
 ) -> impl IntoResponse {
     if admin_user.is_some() {
-        return Redirect::to("/admin/dashboard").into_response();
+        return Redirect::to(&filters::path("/admin/dashboard")).into_response();
     }
 
     AdminLoginTemplate {
@@ -123,7 +123,7 @@ pub async fn login_submit(
                     return template.into_response();
                 }
 
-                return Redirect::to("/user/dashboard").into_response();
+                return Redirect::to(&filters::path("/user/dashboard")).into_response();
             } else {
                 let template = LoginTemplate {
                     error: Some("Invalid username or password".to_string()),
@@ -201,7 +201,7 @@ pub async fn admin_login_submit(
                 }
 
                 tracing::info!("Admin session created, redirecting to /admin/dashboard");
-                Redirect::to("/admin/dashboard").into_response()
+                Redirect::to(&filters::path("/admin/dashboard")).into_response()
             } else {
                 tracing::warn!("Admin login failed: Invalid password for {}", credentials.username);
                 AdminLoginTemplate {
@@ -238,7 +238,7 @@ pub async fn register_page(
     let csrf_token = ensure_csrf_token(&session).await;
     // If already logged in, redirect to home
     if user.is_some() {
-        return Redirect::to("/user/dashboard").into_response();
+        return Redirect::to(&filters::path("/user/dashboard")).into_response();
     }
 
     let template = RegisterTemplate {
@@ -311,7 +311,7 @@ pub async fn register_submit(
             let _ = session
                 .insert("flash_success", "Registration successful!".to_string())
                 .await;
-            Redirect::to("/user/dashboard").into_response()
+            Redirect::to(&filters::path("/user/dashboard")).into_response()
         }
         Err(e) => {
             let error_msg = if e.to_string().contains("Duplicate entry") {
@@ -332,7 +332,7 @@ pub async fn register_submit(
 // Logout handler
 pub async fn logout(Extension(session): Extension<Session>) -> impl IntoResponse {
     let _ = AuthUser::logout(&session).await;
-    Redirect::to("/login")
+    Redirect::to(&filters::path("/login"))
 }
 
 // Error handler

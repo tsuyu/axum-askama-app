@@ -5,7 +5,6 @@ use crate::state::AppState;
 
 pub fn routes() -> Router<AppState> {
     Router::new()
-        .route("/", get(page_controller::index))
         .route(
             "/login",
             get(page_controller::login_page).post(page_controller::login_submit),

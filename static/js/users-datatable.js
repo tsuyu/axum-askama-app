@@ -1,5 +1,7 @@
 // Initialize DataTable for users list
 $(document).ready(function () {
+    const basePath = window.BASE_PATH || '';
+
     const table = $('#usersTable').DataTable({
         // Enable server-side processing
         processing: true,
@@ -7,7 +9,7 @@ $(document).ready(function () {
 
         // AJAX configuration
         ajax: {
-            url: '/api/v1/users/datatable',
+            url: basePath + '/api/v1/users/datatable',
             type: 'GET',
             error: function (xhr, error, thrown) {
                 console.error('DataTables AJAX error:', error);
@@ -52,8 +54,8 @@ $(document).ready(function () {
                 width: '10%',
                 render: function (data, type, row) {
                     return (
-                        '<a href="/admin/users/' + data + '" class="btn btn-sm btn-gradient me-1">View</a>' +
-                        '<a href="/admin/users/' + data + '/edit" class="btn btn-sm btn-outline-secondary">Edit</a>'
+                        '<a href="' + basePath + '/admin/users/' + data + '" class="btn btn-sm btn-gradient me-1">View</a>' +
+                        '<a href="' + basePath + '/admin/users/' + data + '/edit" class="btn btn-sm btn-outline-secondary">Edit</a>'
                     );
                 }
             }
@@ -103,6 +105,6 @@ $(document).ready(function () {
         params.set('order_column', orderColumn);
         params.set('order_direction', orderDirection);
 
-        window.open('/admin/users/print?' + params.toString(), '_blank');
+        window.open(basePath + '/admin/users/print?' + params.toString(), '_blank');
     });
 });

@@ -1,6 +1,5 @@
 use askama::Template;
-
-use super::User;
+use crate::filters;
 
 // Index page template
 #[derive(Template)]
@@ -10,22 +9,6 @@ pub struct IndexTemplate {
     pub message: String,
     pub user: Option<String>,
     pub flash_success: Option<String>,
-}
-
-// Users list template
-#[derive(Template)]
-#[template(path = "users/list.html")]
-pub struct UsersListTemplate {
-    pub page_title: String,
-    pub current_user: Option<String>,
-}
-
-// User detail template
-#[derive(Template)]
-#[template(path = "users/detail.html")]
-pub struct UserDetailTemplate {
-    pub user: User,
-    pub current_user: Option<String>,
 }
 
 // Error page template
@@ -69,25 +52,3 @@ pub struct UserDashboardTemplate {
     pub current_user: Option<String>,
 }
 
-// Create user page template
-#[derive(Template)]
-#[template(path = "users/create.html")]
-pub struct CreateUserTemplate {
-    pub error: Option<String>,
-    pub success: Option<String>,
-    pub username: Option<String>,
-    pub email: Option<String>,
-    pub current_user: Option<String>,
-}
-
-// Edit user page template
-#[derive(Template)]
-#[template(path = "users/edit.html")]
-pub struct EditUserTemplate {
-    pub error: Option<String>,
-    pub success: Option<String>,
-    pub user_id: i32,
-    pub username: String,
-    pub email: String,
-    pub current_user: Option<String>,
-}

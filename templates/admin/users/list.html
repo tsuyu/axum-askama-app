@@ -5,22 +5,22 @@
 {% block admin_nav %}
 {% if let Some(username) = current_admin %}
 <span class="me-3"><strong>{{ username }}</strong></span>
-<a href="/admin/logout" class="btn btn-sm btn-outline-light">Logout</a>
+<a href="{{ "/admin/logout"|url }}" class="btn btn-sm btn-outline-light">Logout</a>
 {% else %}
-<a href="/admin/login" class="btn btn-sm btn-outline-light">Login</a>
+<a href="{{ "/loginadmin"|url }}" class="btn btn-sm btn-outline-light">Login</a>
 {% endif %}
 {% endblock %}
 
 {% block admin_links %}
 {% if let Some(_) = current_admin %}
 <li class="nav-item">
-    <a class="nav-link active" href="/admin/users">Users</a>
+    <a class="nav-link active" href="{{ "/admin/users"|url }}">Users</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link" href="/admin/countries">Countries</a>
+    <a class="nav-link" href="{{ "/admin/countries"|url }}">Countries</a>
 </li>
 <li class="nav-item">
-    <a class="nav-link" href="/admin/states">States</a>
+    <a class="nav-link" href="{{ "/admin/states"|url }}">States</a>
 </li>
 {% endif %}
 {% endblock %}
@@ -31,7 +31,7 @@
         <h1 class="mb-0">{{ page_title }}</h1>
         <div class="d-flex gap-2">
             <button id="exportPdfBtn" class="btn btn-dark text-white">Export PDF</button>
-            <a href="/admin/users/new" class="btn btn-gradient">Create User</a>
+            <a href="{{ "/admin/users/new"|url }}" class="btn btn-gradient">Create User</a>
         </div>
     </div>
 
@@ -53,5 +53,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/users-datatable.js"></script>
+<script src="{{ "/static/js/users-datatable.js"|url }}"></script>
 {% endblock %}

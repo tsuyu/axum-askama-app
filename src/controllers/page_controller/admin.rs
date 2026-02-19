@@ -11,6 +11,7 @@ use tower_sessions::Session;
 use validator::Validate;
 
 use crate::controllers::auth_controller::{AdminUser, OptionalAdminUser};
+use crate::filters;
 use crate::models::{self, DatatableParams, DatatableResponse};
 use crate::repository;
 use crate::state::AppState;
@@ -214,7 +215,7 @@ pub async fn admin_country_create_submit(
     }
 
     invalidate_geo_cache(&state).await;
-    Redirect::to("/admin/countries").into_response()
+    Redirect::to(&filters::path("/admin/countries")).into_response()
 }
 
 // Country edit page (GET)
@@ -313,7 +314,7 @@ pub async fn admin_country_edit_submit(
     }
 
     invalidate_geo_cache(&state).await;
-    Redirect::to("/admin/countries").into_response()
+    Redirect::to(&filters::path("/admin/countries")).into_response()
 }
 
 // Country delete (POST)
@@ -365,22 +366,22 @@ pub async fn admin_country_delete(
     }
 
     invalidate_geo_cache(&state).await;
-    Redirect::to("/admin/countries").into_response()
+    Redirect::to(&filters::path("/admin/countries")).into_response()
 }
 
 // Admin index
 pub async fn admin_index(OptionalAdminUser(admin_user): OptionalAdminUser) -> impl IntoResponse {
     if admin_user.is_some() {
-        Redirect::to("/admin/dashboard").into_response()
+        Redirect::to(&filters::path("/admin/dashboard")).into_response()
     } else {
-        Redirect::to("/loginadmin").into_response()
+        Redirect::to(&filters::path("/loginadmin")).into_response()
     }
 }
 
 // Admin logout
 pub async fn admin_logout(Extension(session): Extension<Session>) -> impl IntoResponse {
     let _ = AdminUser::logout(&session).await;
-    Redirect::to("/loginadmin").into_response()
+    Redirect::to(&filters::path("/loginadmin")).into_response()
 }
 
 // Admin dashboard (GET) - requires authentication
@@ -532,7 +533,7 @@ pub async fn admin_state_create_submit(
     }
 
     invalidate_geo_cache(&state).await;
-    Redirect::to("/admin/states").into_response()
+    Redirect::to(&filters::path("/admin/states")).into_response()
 }
 
 // State edit page (GET)
@@ -662,7 +663,7 @@ pub async fn admin_state_edit_submit(
     }
 
     invalidate_geo_cache(&state).await;
-    Redirect::to("/admin/states").into_response()
+    Redirect::to(&filters::path("/admin/states")).into_response()
 }
 
 // State delete (POST)
@@ -703,7 +704,7 @@ pub async fn admin_state_delete(
     }
 
     invalidate_geo_cache(&state).await;
-    Redirect::to("/admin/states").into_response()
+    Redirect::to(&filters::path("/admin/states")).into_response()
 }
 
 // States API (admin)
@@ -882,7 +883,7 @@ pub async fn user_create_submit(
     )
     .await
     {
-        Ok(_) => Redirect::to("/admin/users").into_response(),
+        Ok(_) => Redirect::to(&filters::path("/admin/users")).into_response(),
         Err(e) => {
             let msg = if e.to_string().contains("Duplicate entry") {
                 "Username or email already exists".to_string()
@@ -1142,7 +1143,7 @@ pub async fn user_edit_submit(
         }
     }
 
-    Redirect::to(&format!("/admin/users/{}", id)).into_response()
+    Redirect::to(&filters::path(&format!("/admin/users/{}", id))).into_response()
 }
 
 // Admin user delete (POST)
@@ -1171,5 +1172,5 @@ pub async fn user_delete(
         return (StatusCode::INTERNAL_SERVER_ERROR, template).into_response();
     }
 
-    Redirect::to("/admin/users").into_response()
+    Redirect::to(&filters::path("/admin/users")).into_response()
 }

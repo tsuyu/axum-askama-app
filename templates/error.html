@@ -6,6 +6,6 @@
 <div class="error-page">
     <h1>Error {{ error_code }}</h1>
     <p>{{ error_message }}</p>
-    <a href="/">Go back home</a>
+    <a href="{{ "/"|url }}">Go back home</a>
 </div>
 {% endblock %}

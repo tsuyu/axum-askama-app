@@ -1,4 +1,5 @@
 mod controllers;
+mod filters;
 mod models;
 mod repository;
 mod pool;
@@ -61,6 +62,11 @@ async fn main() {
 
     // Load environment variables
     dotenvy::dotenv().ok();
+
+    // Initialise base path filter (strips trailing slash, e.g. "/boilerplate")
+    let base_path = std::env::var("APP_BASE_PATH")
+        .unwrap_or_default();
+    filters::init(base_path.trim_end_matches('/').to_string());
 
     let database_url =
         std::env::var("DATABASE_URL").expect("DATABASE_URL must be set in .env file");

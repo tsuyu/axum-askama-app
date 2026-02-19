@@ -15,7 +15,7 @@
                 </div>
                 {% endif %}
 
-                <form method="post" action="/login">
+                <form method="post" action="{{ "/login"|url }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                     <div class="mb-3">
                         <label for="username" class="form-label">Username</label>
@@ -33,7 +33,7 @@
                 </form>
 
                 <div class="text-center mt-4">
-                    <p class="text-muted">Don't have an account? <a href="/register"
+                    <p class="text-muted">Don't have an account? <a href="{{ "/register"|url }}"
                             class="text-decoration-none fw-bold">Register here</a></p>
                 </div>
             </div>
