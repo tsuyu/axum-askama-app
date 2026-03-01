@@ -23,6 +23,10 @@ use crate::state::AppState;
 
 #[tokio::main]
 async fn main() {
+
+    // Load environment variables
+    dotenvy::dotenv().ok();
+    
     let env_name = env::var("APP_ENV").unwrap_or_else(|_| "development".to_string());
     let log_dir = env::var("LOG_DIR").ok();
 
@@ -60,8 +64,7 @@ async fn main() {
 
     tracing::info!("Application starting in {} mode", env_name);
 
-    // Load environment variables
-    dotenvy::dotenv().ok();
+    
 
     // Initialise base path filter (strips trailing slash, e.g. "/boilerplate")
     let base_path = std::env::var("APP_BASE_PATH")
